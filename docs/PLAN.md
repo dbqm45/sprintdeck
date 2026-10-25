@@ -16,6 +16,7 @@
 | 2026-10-25 | Harmonogram 5 tygodni jest **orientacyjny** (brak deadline'u) — tygodnie traktujemy jako kolejne kamienie milowe, nie daty. |
 | 2026-10-25 | Mediana między kartami → **najbliższa karta, remis w górę** (np. 3 i 5 → mediana 4 → rekomendacja 5). |
 | 2026-10-25 | Rozwój **lokalnie** (Supabase CLI w Dockerze); konta Vercel/Supabase Cloud i domena dopiero przed pierwszym wdrożeniem (sekcja 8 — „Kiedy potrzebna infrastruktura”). |
+| 2026-10-25 | Backend pokoi (M2) zrobiony: `supabase/migrations/20261025150000_rooms.sql` + testy pgTAP. Zdarzenia realtime wysyła samo RPC (`private.emit`), a nie triggery — wszystkie zapisy i tak idą przez RPC. Ponowne głosowanie = `start_round` na tym samym zadaniu (osobne `revote` niepotrzebne). Dodatkowo: `get_room_preview` (ekran dołączenia), `set_current_item`, `skip_item`, `close_room`. |
 
 ---
 
