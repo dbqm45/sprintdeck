@@ -1,0 +1,460 @@
+# Sprintdeck — plan realizacji MVP
+
+> Dokument roboczy. Bazuje na „Sprintdeck — Plan produktu i realizacji MVP v1.0”
+> i przekłada go na decyzje techniczne, backlog oraz harmonogram.
+> Wszystko oznaczone jako **[DECYZJA]** to rekomendacja do potwierdzenia,
+> a **[OTWARTE]** to pytanie, które trzeba rozstrzygnąć.
+
+---
+
+## 1. Podsumowanie i główne wnioski z analizy
+
+1. **Repozytorium jest puste** — budujemy od zera, więc tydzień 2 obejmuje pełny
+   scaffolding (Next.js, Supabase, CI, deploy).
+2. **Najtrudniejsze technicznie nie jest głosowanie, tylko „sekret do odkrycia”**:
+   ukrycie wartości głosów na poziomie backendu przy jednoczesnej synchronizacji
+   w czasie rzeczywistym. To determinuje architekturę (sekcja 3).
+3. **Model danych wymaga jednej istotnej korekty**: ponowne głosowanie tworzy
+   kilka rund dla jednego zadania, więc `final_estimate` i notatka należą do
+   **zadania (`items`)**, a nie do rundy. Bez tego historia rund i zatwierdzanie
+   się rozjadą (sekcja 4).
+4. **`organizations` / `teams` nie są potrzebne w MVP** — żadna funkcja MVP z nich
+   nie korzysta. Dodamy je migracją razem z „pamięcią zespołu”. **[DECYZJA]**
+5. **Consensus Engine to czysta, deterministyczna biblioteka TS** z testami
+   opartymi o tabelę przypadków. Można ją zbudować już w tygodniu 1 i użyć
+   jako prototypu w rozmowach ze Scrum Masterami (sekcja 5).
+6. **Uczestnicy bez konta = Supabase Anonymous Sign-In.** Każda przeglądarka
+   dostaje prawdziwe `auth.uid()`, dzięki czemu RLS działa natywnie, a
+   odświeżenie strony zachowuje tożsamość „za darmo”.
+7. **Harmonogram 5 tygodni jest realny dla 1 osoby tylko przy twardym cięciu
+   zakresu** — backlog jest podzielony na Must / Should / Could (sekcja 7).
+
+---
+
+## 2. Zakres MVP — doprecyzowanie
+
+### 2.1. Główny przepływ (happy path)
+
+```
+Prowadzący:  [Landing] → „Utwórz pokój” (tytuł + nick) → [Pokój] → kopiuje link
+Uczestnik:   link → [Ekran dołączenia: nick] → [Pokój]
+Pokój:       dodaj zadanie → start rundy → głosy (ukryte, widać tylko „zagłosował”)
+             → prowadzący odkrywa → statystyki + rozbieżność + pytania
+             → (opcjonalnie) ponowna runda → prowadzący zatwierdza estymatę + notatka
+             → następne zadanie
+Koniec:      podsumowanie sesji (lista zadań z estymatami) + eksport
+```
+
+### 2.2. Doprecyzowania, których brakuje w specyfikacji
+
+| Temat | Propozycja **[DECYZJA]** |
+|---|---|
+| Kto zatwierdza wynik | Tylko prowadzący (spec: „zespół lub prowadzący” — głosowanie nad zatwierdzeniem odkładamy). |
+| Czy prowadzący głosuje | Tak, domyślnie. Każdy może przełączyć się w tryb **obserwatora** (np. PO, który tylko wyjaśnia). |
+| Czy głosy po odkryciu są imienne | Tak (standard Planning Poker, potrzebne do pytań typu „co widzi osoba z 21?”). Tryb anonimowy → później. |
+| Zmiana głosu | Dozwolona do momentu odkrycia. Po odkryciu runda jest zamrożona. |
+| Odkrycie przy brakujących głosach | Dozwolone (prowadzący decyduje), UI pokazuje „4/6 zagłosowało”. |
+| Zadania | Dodawane ręcznie (tytuł + opcjonalny opis/link). Import z Jiry → poza MVP. |
+| Talia | Tylko Fibonacci `0, ½, 1, 2, 3, 5, 8, 13, 21, ?, ☕`. Model danych przygotowany na inne talie. |
+| Utrata prowadzącego | Prowadzący może przekazać rolę. Dodatkowo: **sekretny link prowadzącego** (pokazany raz przy tworzeniu) pozwala odzyskać rolę z innego urządzenia. |
+| „Trwały zapis wyniku” | Wyniki zapisane w DB + eksport sesji (kopiuj jako Markdown / CSV). Eksport to też tani test hipotezy „przenoszenia do Jiry”. |
+| Retencja | Pokój nieaktywny 90 dni → archiwizacja/usunięcie. **[OTWARTE]** |
+
+### 2.3. Poza zakresem MVP (świadomie)
+
+Konta i organizacje, pamięć zespołu / wyszukiwanie podobnych zadań, integracje
+Jira/Linear, własne talie, timer, czat, płatności, panel analityczny EM.
+
+---
+
+## 3. Architektura
+
+### 3.1. Stack
+
+- **Next.js (App Router) + React + TypeScript + Tailwind CSS** — aktualne stabilne wersje.
+- Komponenty UI: własne + `shadcn/ui` / Radix (dostępność, styl „Linear-like”).
+- **Supabase**: Postgres, Auth (anonymous sign-in), Realtime (Broadcast + Presence).
+- Testy: **Vitest** (engine, logika), **pgTAP** przez `supabase test db` (RLS i RPC),
+  **Playwright** (E2E, wielu uczestników w osobnych kontekstach przeglądarki).
+- Hosting: **Vercel + Supabase Cloud w regionie UE (Frankfurt)** — RODO. **[DECYZJA]**
+- CI: GitHub Actions — lint, typecheck, Vitest, testy DB (Supabase CLI w Dockerze), Playwright.
+
+### 3.2. Kluczowa decyzja: wszystkie zapisy przez funkcje RPC w Postgresie
+
+Klient **nie ma** uprawnień `insert/update/delete` do żadnej tabeli. Każda
+operacja to funkcja `SECURITY DEFINER`, która w jednej transakcji:
+sprawdza tożsamość (`auth.uid()`), rolę w pokoju, stan maszyny stanów i
+poprawność danych.
+
+| RPC | Kto | Uwagi |
+|---|---|---|
+| `create_room(title, display_name)` | dowolny zalogowany anonimowo | zwraca `slug` + jednorazowy `host_secret`; limit tworzenia pokoi/h |
+| `join_room(slug, display_name)` | dowolny | idempotentne (ponowne wejście = ten sam uczestnik); limit prób |
+| `claim_host(slug, host_secret)` | dowolny z sekretem | sekret przechowywany jako hash |
+| `set_participant_role(participant_id, role)` | host | host / voter / observer, przekazanie roli |
+| `add_item(room_id, title, description)` / `update_item` / `reorder_items` | host | |
+| `start_round(item_id)` | host | tylko jedna runda `voting` na pokój |
+| `cast_vote(round_id, value)` / `clear_vote(round_id)` | voter / host | wartość walidowana względem talii, tylko gdy `voting` |
+| `reveal_round(round_id)` | host | `voting → revealed`, ustawia `revealed_at` |
+| `revote(item_id)` | host | nowa runda `number + 1`, poprzednia zostaje w historii |
+| `finalize_item(item_id, estimate, note)` | host | estymata musi należeć do talii (bez `?`/☕) |
+| `get_room_state(slug)` | uczestnik | pełny snapshot JSON; **wartości głosów tylko dla odkrytych rund** (dla bieżącej: `has_voted`) |
+
+Dlaczego RPC, a nie Server Actions z kluczem `service_role`:
+atomowość przejść stanów, jedno źródło prawdy o uprawnieniach, RLS jako druga
+linia obrony, mniej miejsc, w których można przypadkiem wyciec klucz serwisowy.
+
+### 3.3. Ukrywanie głosów — dwie warstwy
+
+1. **RLS na `votes`**: `SELECT` dozwolony dla własnego głosu **albo** gdy runda
+   ma status `revealed` i użytkownik jest uczestnikiem pokoju.
+2. **Realtime nie przenosi wartości**: zdarzenia o głosach zawierają wyłącznie
+   `{round_id, participant_id, has_voted}`. Wartości klient pobiera dopiero po
+   zdarzeniu `round_revealed` przez `get_room_state`.
+
+Test bezpieczeństwa (pgTAP + E2E): uczestnik B nie może w żaden sposób
+(SELECT, RPC, kanał realtime) odczytać wartości głosu A przed odkryciem.
+
+### 3.4. Realtime i odporność na rozłączenia
+
+- **Prywatny kanał Broadcast `room:{room_id}`**, autoryzowany przez RLS na
+  `realtime.messages` (tylko uczestnicy pokoju).
+- Zdarzenia wysyłane **z bazy** (triggery → `realtime.send`) po każdej zmianie
+  stanu: `participant_joined/updated`, `item_changed`, `round_started`,
+  `vote_status_changed`, `round_revealed`, `item_finalized`.
+- **Presence** na tym samym kanale → status online/offline uczestników.
+- Wzorzec **„zdarzenie → łatka lub ponowny snapshot”**: klient trzyma stan
+  z `get_room_state`; drobne zdarzenia nakłada lokalnie, a przy
+  (re)subskrypcji, powrocie karty z tła lub wykryciu luki pobiera pełny snapshot.
+  Dzięki temu odświeżenie strony i reconnect to ta sama ścieżka kodu.
+- Każde zdarzenie niesie `room_version` (licznik w `rooms`) → klient wykrywa
+  pominięte zdarzenia i robi refetch.
+- Odświeżenie strony: sesja anonimowa w `localStorage` → ten sam `auth.uid()` →
+  `join_room` zwraca istniejącego uczestnika.
+
+### 3.5. Dostęp do pokoju i nadużycia
+
+- `slug`: 12 znaków base62 (~71 bitów entropii) z CSPRNG — zgadywanie nierealne.
+- Bez członkostwa nie da się odczytać nic o pokoju (brak listowania, RLS).
+- Limity w RPC (tabela zdarzeń / liczniki): np. ≤ 10 pokoi/h i ≤ 30 dołączeń/h na użytkownika.
+- **CAPTCHA (Cloudflare Turnstile) przy anonimowym logowaniu** — wspierane natywnie przez Supabase.
+- Walidacja nicków (1–32 znaki, trim, bez znaków sterujących), limit długości opisów/notatek.
+- Nagłówki bezpieczeństwa (CSP) w Next.js.
+
+### 3.6. Struktura repozytorium
+
+```
+sprintdeck/
+├─ src/
+│  ├─ app/
+│  │  ├─ page.tsx                # landing + tworzenie pokoju
+│  │  └─ r/[slug]/page.tsx       # pokój (dołączenie + widok sesji)
+│  ├─ components/                # UI: karty, lista uczestników, panel wyników…
+│  ├─ features/room/             # store stanu pokoju, hooki realtime, akcje RPC
+│  └─ lib/
+│     ├─ consensus/              # Consensus Engine (czysty TS, bez zależności)
+│     ├─ deck.ts                 # definicja talii
+│     └─ supabase/               # klienci (browser/server), typy generowane
+├─ supabase/
+│  ├─ migrations/                # schemat, RLS, RPC, triggery
+│  ├─ tests/                     # pgTAP: RLS i RPC
+│  └─ seed.sql
+├─ e2e/                          # Playwright (multi-uczestnik, offline)
+└─ docs/
+```
+
+---
+
+## 4. Model danych (MVP)
+
+Zmiany względem specyfikacji: `session_id` → `user_id` (z anonymous auth),
+nowa tabela **`items`** (zadanie) między pokojem a rundami, `organizations`/`teams`
+odłożone.
+
+```sql
+rooms (
+  id               uuid pk,
+  slug             text unique not null,          -- publiczny identyfikator w linku
+  title            text not null check (char_length(title) <= 120),
+  status           text not null default 'open',  -- open | closed | archived
+  deck             text not null default 'fibonacci',
+  owner_id         uuid not null references auth.users,
+  host_secret_hash text not null,
+  current_item_id  uuid null references items,
+  version          bigint not null default 0,     -- do wykrywania pominiętych zdarzeń
+  created_at, last_activity_at timestamptz
+)
+
+participants (
+  id            uuid pk,
+  room_id       uuid not null references rooms on delete cascade,
+  user_id       uuid not null references auth.users,
+  display_name  text not null check (char_length(display_name) between 1 and 32),
+  role          text not null,                    -- host | voter | observer
+  joined_at, last_seen_at timestamptz,
+  unique (room_id, user_id)
+)
+-- dokładnie jeden host na pokój: unique index (room_id) where role = 'host'
+
+items (                                           -- „zadanie” estymowane w pokoju
+  id             uuid pk,
+  room_id        uuid not null references rooms on delete cascade,
+  title          text not null,
+  description    text null,
+  position       int not null,
+  status         text not null default 'pending', -- pending | estimating | estimated | skipped
+  final_estimate text null,                       -- wartość z talii
+  finalized_by   uuid null references participants,
+  finalized_at   timestamptz null,
+  created_at     timestamptz
+)
+
+rounds (
+  id          uuid pk,
+  item_id     uuid not null references items on delete cascade,
+  room_id     uuid not null references rooms on delete cascade,  -- denormalizacja pod RLS
+  number      int not null,                       -- 1, 2, 3… (ponowne głosowania)
+  status      text not null,                      -- voting | revealed
+  started_at, revealed_at timestamptz,
+  unique (item_id, number)
+)
+-- maks. jedna aktywna runda na pokój: unique index (room_id) where status = 'voting'
+
+votes (
+  id             uuid pk,
+  round_id       uuid not null references rounds on delete cascade,
+  participant_id uuid not null references participants on delete cascade,
+  value          text not null,                   -- walidowane w RPC względem talii
+  created_at, updated_at timestamptz,
+  unique (round_id, participant_id)
+)
+
+decision_notes (
+  id             uuid pk,
+  item_id        uuid not null references items on delete cascade,
+  author_id      uuid not null references participants,
+  content        text not null check (char_length(content) <= 2000),
+  created_at     timestamptz
+)
+```
+
+Indeksy: FK (`room_id`, `item_id`, `round_id`), `participants(user_id)`.
+Funkcja pomocnicza `is_room_member(room_id)` używana w politykach RLS.
+
+**Statystyk nie zapisujemy** — zawsze wyliczamy je z surowych głosów tym samym
+silnikiem. Dzięki temu poprawki progów nie wymagają migracji danych historycznych.
+
+---
+
+## 5. Consensus Engine — specyfikacja implementacyjna
+
+Moduł `src/lib/consensus`, czyste funkcje, zero zależności, 100% pokrycia testami.
+
+```ts
+analyzeRound(votes: VoteValue[], deck: Deck): RoundAnalysis
+
+type RoundAnalysis = {
+  counts: { numeric: number; unknown: number; break: number; total: number };
+  stats: { mean; median; modes: number[]; min; max; range } | null;
+  distribution: { value: string; count: number }[];   // w kolejności talii
+  recommendation: { median: number; nearestDeckValue: string } | null;
+  state: 'A_consensus' | 'B_moderate' | 'C_high' | 'D_insufficient';
+  pattern: 'unanimous' | 'adjacent' | 'outlier' | 'polarized' | 'wide' | 'insufficient';
+  flags: ('high_uncertainty' | 'large_item' | 'break_requested')[];
+  questions: QuestionId[];                             // 2–3 pytania dobrane do wzorca
+}
+```
+
+### 5.1. Statystyki
+
+- Karty `?` i ☕ wyłączone ze statystyk liczbowych (liczone osobno).
+- ½ = 0.5. Średnia zaokrąglana do 1 miejsca po przecinku (tylko prezentacja).
+- Dominanta: wszystkie wartości z maksymalną liczbą głosów; jeśli każda wartość
+  wystąpiła raz → „brak dominanty”.
+- **Rekomendacja = mediana.** Jeśli mediana nie należy do talii (np. 3 i 5 → 4),
+  pokazujemy „mediana: 4” i osobno „najbliższa karta: 5”.
+  Remis odległości → **w górę** (estymaty statystycznie częściej są zaniżone). **[DECYZJA]**
+
+### 5.2. Klasyfikacja rozbieżności (na indeksach talii, nie na wartościach)
+
+Fibonacci jest skalą ~logarytmiczną, więc odległość mierzymy w **krokach talii**:
+`0→0, ½→1, 1→2, 2→3, 3→4, 5→5, 8→6, 13→7, 21→8`.
+Dzięki temu „1 vs 2” i „8 vs 13” to ta sama rozbieżność (1 krok) — zgodnie z intuicją zespołów.
+
+Algorytm (progi w jednym obiekcie konfiguracyjnym, do kalibracji):
+
+1. `N` = liczba głosów liczbowych, `Q` = liczba `?`.
+   Jeśli `N < 2` **lub** `Q > N` → **D** (`insufficient`).
+2. `spread = maxIdx − minIdx`. Jeśli `0` → **A** (`unanimous`).
+3. Szukamy **luk**: sąsiednie użyte indeksy oddalone o ≥ 2 kroki (pusta karta pomiędzy).
+   - Jeśli po obu stronach luki jest ≥ 25% głosów → **C** (`polarized`) — dwa obozy.
+   - Jeśli po jednej stronie jest < 25% głosów → to **odstające głosy**; wyłączamy je
+     i liczymy spread reszty. Reszta ≤ 2 kroki → **B** (`outlier`).
+4. Spread ≤ 2 bez luk → **B** (`adjacent`).
+5. W pozostałych przypadkach (spread ≥ 3) → **C** (`wide`).
+
+Flagi (niezależnie od stanu): `Q ≥ ⅓` aktywnych głosów → `high_uncertainty`;
+rekomendacja ≥ 13 → `large_item`; dowolna ☕ → `break_requested`.
+
+Przypadki testowe (zalążek tabeli w Vitest):
+
+| Głosy | Stan | Wzorzec | Komentarz |
+|---|---|---|---|
+| 5,5,5,5 | A | unanimous | |
+| 3,5,5,5 | B | adjacent | spread 1 |
+| 3,5,8,5 | B | adjacent | spread 2, bez luk |
+| 3,3,8,8 | C | polarized | luka (brak 5), 50/50 |
+| 2,3,5,8,13 | C | wide | spread 4, równomiernie |
+| 5,5,5,5,21 | B | outlier | 21 = 20% < 25%, reszta zgodna |
+| 1,2,3,5,13,21 | C | polarized | luka 5→13, 67/33 |
+| 5,?,?,? | D | insufficient | 1 głos liczbowy |
+| 3,5,?,? | B | adjacent | + flaga `high_uncertainty` |
+| 13,21,21 | B | adjacent | + flaga `large_item` |
+
+### 5.3. Pytania pomocnicze — dobór do wzorca
+
+Bank pytań w pliku z tekstami (łatwa edycja i tłumaczenie). Pokazujemy 2–3,
+nie całą listę.
+
+| Wzorzec / flaga | Pytania (przykłady) |
+|---|---|
+| adjacent | „Co przesądza o tym, że to raczej {niższa} niż {wyższa}?”, „Czy estymata uwzględnia testowanie i wdrożenie?” |
+| outlier | „Co widzi {imię} ({wartość}), czego nie widzi reszta?”, „Czy uwzględniliśmy zależności z innymi systemami?”, „Czy widzimy dodatkowe ryzyka lub przypadki brzegowe?” |
+| polarized | „Czy wszyscy rozumiemy zakres zadania w ten sam sposób?”, „Czy obie grupy zakładają to samo rozwiązanie techniczne?”, „Czy kryteria akceptacji są wystarczająco precyzyjne?” |
+| wide | „Czy wszyscy rozumiemy zakres zadania w ten sam sposób?”, „Czy zadanie nie jest za duże — może warto je podzielić?” |
+| high_uncertainty | „Czego brakuje, żeby móc oszacować?”, „Czy potrzebujemy doprecyzowania z PO albo spike'a?” |
+| large_item | „Czy da się podzielić to zadanie na mniejsze?” |
+
+Komunikaty stanów zgodnie ze specyfikacją: A „Pełna zgodność”,
+B „Warto sprawdzić różnice w założeniach”, C „Przed zatwierdzeniem warto
+omówić różnice”, D „Za mało głosów, by wyciągać wnioski”.
+
+W widoku rundy n+1 pokazujemy porównanie z rundą n (np. „rozrzut: 4 → 1 krok”).
+
+---
+
+## 6. UX — ekrany MVP
+
+1. **Landing** — jedno pole „Nazwa sesji” + „Twój nick” + przycisk. Zero konfiguracji.
+2. **Dołączenie** — sam nick (zapamiętany lokalnie na kolejne sesje).
+3. **Pokój** (desktop: 3 kolumny, mobile: zakładki):
+   - lewa: lista zadań (status, estymata),
+   - środek: bieżące zadanie, stół z uczestnikami (zagłosował / nie / offline), talia kart,
+   - po odkryciu: panel wyników — rozkład (słupki), mediana/średnia/dominanta,
+     stan rozbieżności, 2–3 pytania, przyciski „Głosuj ponownie” / „Zatwierdź”.
+   - prawa (lub szuflada): historia rund bieżącego zadania.
+4. **Zatwierdzenie** — wybór karty (domyślnie podpowiedź z mediany) + opcjonalna notatka.
+5. **Podsumowanie sesji** — tabela zadań, estymat, liczby rund; eksport Markdown/CSV.
+
+Wymagania: mobile-first (duże pola dotyku kart), obsługa klawiatury
+(`1–9` wybór karty, `R` odkryj — dla prowadzącego), `aria-pressed` na kartach,
+tryb jasny/ciemny.
+Język UI: **[OTWARTE]** — rekomendacja: polski w MVP (rozmowy walidacyjne),
+ale wszystkie teksty od początku w słowniku, żeby dodać EN bez refaktoru.
+
+---
+
+## 7. Backlog MVP (MoSCoW)
+
+**Must** (bez tego nie ma MVP)
+- M1 Scaffolding: Next.js + TS + Tailwind, Supabase lokalnie, CI, deploy preview.
+- M2 Schemat DB + RLS + RPC + testy pgTAP.
+- M3 Anonymous auth, tworzenie pokoju, dołączenie przez link i nick.
+- M4 Zadania: dodawanie, wybór bieżącego.
+- M5 Runda: start, głosowanie (talia + `?` + ☕), status „zagłosował”, odkrycie przez hosta.
+- M6 Realtime (Broadcast + Presence), snapshot przy refresh/reconnect.
+- M7 Consensus Engine (lib + testy) i panel wyników.
+- M8 Ponowne głosowanie + historia rund.
+- M9 Zatwierdzenie estymaty + notatka.
+- M10 Testy E2E: 6–10 uczestników, rozłączenie/powrót, próby ataków na ukryte głosy.
+
+**Should**
+- S1 Obserwator, przekazanie roli prowadzącego, sekretny link prowadzącego.
+- S2 Podsumowanie sesji + eksport Markdown/CSV.
+- S3 Limity nadużyć + Turnstile.
+- S4 Porównanie rundy n vs n+1.
+- S5 Minimalna analityka produktowa (zdarzenia do metryk z sekcji 9).
+
+**Could**
+- C1 Skróty klawiszowe, tryb ciemny, animacje odkrycia.
+- C2 Usuwanie/edycja zadań, zmiana kolejności drag & drop.
+- C3 Podpięcie konta e-mail do sesji anonimowej (zachowanie historii hosta).
+
+**Linia cięcia**: jeśli tydzień 4 się opóźni, S1/S2/S4 przechodzą po MVP;
+S3 zostaje przed publicznym udostępnieniem linku.
+
+---
+
+## 8. Harmonogram (zmodyfikowany)
+
+Zmiana względem planu bazowego: Consensus Engine (jako biblioteka) i
+scaffolding startują równolegle z walidacją w tygodniu 1 — nie zależą od
+wyników rozmów, a działający „symulator” silnika podnosi jakość wywiadów.
+
+### Tydzień 1 — walidacja + prototyp silnika
+- Scenariusz wywiadu (problemy z sekcji 2 specyfikacji jako hipotezy do zbicia),
+  rekrutacja i 5–8 rozmów ze Scrum Masterami.
+- Implementacja `lib/consensus` + tabela przypadków testowych.
+- **Symulator**: prosta strona „wpisz głosy → zobacz stan, wzorzec i pytania”.
+  W wywiadach: „Oto głosy z waszego ostatniego refinementu — czy ta podpowiedź pomogłaby?”
+- Makiety 5 ekranów (sekcja 6), metryki sukcesu (sekcja 9).
+- **Wynik**: notatki z rozmów, skalibrowane progi, zatwierdzone makiety, go/no-go na wyróżnik.
+
+### Tydzień 2 — fundamenty
+- M1, M2, M3, M4. Testy RLS od pierwszej migracji.
+- **Wynik**: można utworzyć pokój, dołączyć z drugiej przeglądarki, dodać zadanie.
+
+### Tydzień 3 — pętla głosowania
+- M5, M6, M8 (bez UI statystyk).
+- **Wynik**: pełna runda z ukrytymi głosami w czasie rzeczywistym, refresh i reconnect działają.
+
+### Tydzień 4 — Consensus Engine w produkcie
+- M7, M9, S1, S2, S4.
+- **Wynik**: kompletny przepływ od utworzenia pokoju do zatwierdzonej estymaty i eksportu.
+
+### Tydzień 5 — testy i stabilizacja
+- M10, S3, S5. Test obciążeniowy (np. 10 pokoi × 10 uczestników).
+- 2–3 sesje użyteczności na prawdziwych refinementach (zespoły z tygodnia 1).
+- Poprawki, deploy produkcyjny, polityka prywatności.
+- **Wynik**: MVP gotowe do pilotażu z kilkoma zespołami.
+
+### Definition of Done (dla każdego zadania)
+Typecheck i lint czyste; testy jednostkowe/DB dla nowej logiki; działa na
+mobile (≥ 360 px); żadna wartość głosu nie trafia do klienta przed odkryciem.
+
+---
+
+## 9. Metryki sukcesu (propozycja do potwierdzenia w tyg. 1)
+
+- **Aktywacja**: % pokoi z ≥ 3 uczestnikami i ≥ 1 zatwierdzonym zadaniem.
+- **Czas do decyzji**: mediana czasu od startu pierwszej rundy do zatwierdzenia.
+- **Skuteczność silnika**: % zadań ze stanem B/C, które po ponownej rundzie przeszły do A/B.
+- **Użycie wyróżników**: % zatwierdzeń z notatką; % rund z ponownym głosowaniem.
+- **Retencja**: % prowadzących, którzy utworzyli kolejny pokój w ciągu 14 dni.
+- **Jakościowo**: „Czy podpowiedzi pomogły w dyskusji?” (1–5) po sesji pilotażowej.
+
+---
+
+## 10. Ryzyka
+
+| Ryzyko | Wpływ | Mitigacja |
+|---|---|---|
+| Consensus Engine nie jest odczuwany jako wartość | wysoki | Walidacja symulatorem w tyg. 1, zanim powstanie reszta produktu. |
+| Wyciek głosów przed odkryciem | wysoki (zaufanie) | Dwie warstwy (RLS + payload bez wartości), dedykowane testy pgTAP i E2E. |
+| Niespójny stan po rozłączeniu | średni | Wzorzec snapshot + wersjonowanie zdarzeń; testy z `setOffline` w Playwright. |
+| Utrata sesji prowadzącego | średni | Przekazanie roli + sekretny link prowadzącego. |
+| Nadużycia anonimowego logowania | średni | Turnstile, limity w RPC, czyszczenie nieaktywnych użytkowników anonimowych. |
+| Limity planu darmowego Supabase | niski w MVP | Monitorowanie połączeń realtime; przejście na plan Pro przed pilotażem z wieloma zespołami. |
+| Harmonogram 5 tyg. przy 1 osobie | średni | Linia cięcia z sekcji 7. |
+
+---
+
+## 11. Pytania otwarte
+
+1. Język interfejsu MVP (PL / EN / oba)?
+2. Czy głosy po odkryciu mają być imienne (rekomendacja: tak)?
+3. Czy prowadzący ma móc działać bez konta także w docelowej wersji płatnej?
+4. Retencja danych pokoi i wymagania RODO (region UE — rekomendacja: Frankfurt).
+5. Ile osób realizuje MVP i czy termin 5 tygodni jest sztywny?
+6. Zaokrąglanie mediany przy remisie — w górę (rekomendacja) czy w dół?
+7. Domena / nazwa produkcyjna i konto Vercel/Supabase — kto zakłada?
