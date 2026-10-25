@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Wordmark } from "@/components/ui/wordmark";
+import { buttonClasses } from "@/components/ui/button";
 import { Simulator } from "@/features/simulator/simulator";
 import { en } from "@/messages/en";
 
@@ -9,13 +11,18 @@ export const metadata: Metadata = {
 
 export default function SimulatorPage() {
   return (
-    <main className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6">
-      <header className="flex flex-col gap-2">
-        <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100">
-          ← {en.app.name}
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 pb-16 sm:px-6">
+      <nav className="flex h-16 items-center justify-between">
+        <Link href="/" aria-label={en.simulator.back}>
+          <Wordmark />
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">{en.simulator.title}</h1>
-        <p className="max-w-2xl text-zinc-600 dark:text-zinc-400">{en.simulator.intro}</p>
+        <Link href="/" className={buttonClasses({ variant: "ghost" })}>
+          {en.simulator.back}
+        </Link>
+      </nav>
+      <header className="flex flex-col gap-2">
+        <h1 className="m-0 text-[32px] leading-[38px] font-semibold tracking-[-0.02em]">{en.simulator.title}</h1>
+        <p className="m-0 max-w-2xl text-body text-ink-muted">{en.simulator.intro}</p>
       </header>
       <Simulator />
     </main>
