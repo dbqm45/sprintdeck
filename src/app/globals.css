@@ -1,25 +1,155 @@
 @import "tailwindcss";
 
+/*
+ * Sprintdeck design tokens — mirror of the design system (tokens.json).
+ * Raw values live on :root (light) and are overridden for dark mode;
+ * @theme maps them to Tailwind utilities (bg-surface, text-ink-muted, …).
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --canvas: #efeeec;
+  --surface: #ffffff;
+  --surface-muted: #f3f2f0;
+  --surface-raised: #ffffff;
+  --surface-hover: #e9e7e4;
+  --line: #e7e5e2;
+  --line-strong: #d6d3cf;
+  --ink: #1a1918;
+  --ink-muted: #6e6a66;
+  --ink-faint: #a8a39e;
+  --brand: #dc6a22;
+  --brand-strong: #c05414;
+  --on-brand: #ffffff;
+  --brand-tint: #fdeee3;
+  --brand-ink: #b04f12;
+  --focus: #c25a17;
+  --tooltip: #1f1e1d;
+  --on-tooltip: #ffffff;
+  --positive: #17773f;
+  --positive-tint: #e6f4ec;
+  --warning: #946200;
+  --warning-tint: #fdf3dc;
+  --negative: #c23434;
+  --negative-tint: #fbe9e9;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --canvas: #121110;
+    --surface: #1c1b1a;
+    --surface-muted: #2a2826;
+    --surface-raised: #3a3734;
+    --surface-hover: #34312e;
+    --line: #34312e;
+    --line-strong: #4a4642;
+    --ink: #f4f2ef;
+    --ink-muted: #a39e98;
+    --ink-faint: #6b6662;
+    --brand-tint: #3a2416;
+    --brand-ink: #f5a56b;
+    --focus: #f5a56b;
+    --tooltip: #f4f2ef;
+    --on-tooltip: #1a1918;
+    --positive: #5fcf8f;
+    --positive-tint: #163222;
+    --warning: #f2c062;
+    --warning-tint: #3a2e14;
+    --negative: #ff8a80;
+    --negative-tint: #3a1d1b;
+    --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-lift: 0 6px 16px rgba(0, 0, 0, 0.5);
   }
 }
 
+@theme inline {
+  /* Only design-system colours — Tailwind's default palette is disabled. */
+  --color-*: initial;
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-on-brand: var(--on-brand);
+  --color-brand-tint: var(--brand-tint);
+  --color-brand-ink: var(--brand-ink);
+  --color-focus: var(--focus);
+  --color-tooltip: var(--tooltip);
+  --color-on-tooltip: var(--on-tooltip);
+  --color-positive: var(--positive);
+  --color-positive-tint: var(--positive-tint);
+  --color-warning: var(--warning);
+  --color-warning-tint: var(--warning-tint);
+  --color-negative: var(--negative);
+  --color-negative-tint: var(--negative-tint);
+
+  --font-sans: var(--font-geist-sans), "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, Menlo, monospace;
+}
+
+@theme {
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 24px;
+
+  --shadow-panel: 0 1px 2px rgba(26, 25, 24, 0.04), 0 8px 24px rgba(26, 25, 24, 0.06);
+  --shadow-lift: 0 6px 16px rgba(192, 84, 20, 0.25);
+
+  /* Type scale: text-kpi, text-title, … (size, line height, weight, tracking). */
+  --text-hero: 48px;
+  --text-hero--line-height: 52px;
+  --text-hero--font-weight: 600;
+  --text-hero--letter-spacing: -0.03em;
+  --text-kpi: 34px;
+  --text-kpi--line-height: 40px;
+  --text-kpi--font-weight: 600;
+  --text-kpi--letter-spacing: -0.02em;
+  --text-card: 24px;
+  --text-card--line-height: 28px;
+  --text-card--font-weight: 600;
+  --text-title: 22px;
+  --text-title--line-height: 28px;
+  --text-title--font-weight: 600;
+  --text-title--letter-spacing: -0.01em;
+  --text-heading: 17px;
+  --text-heading--line-height: 24px;
+  --text-heading--font-weight: 500;
+  --text-lead: 18px;
+  --text-lead--line-height: 28px;
+  --text-body: 15px;
+  --text-body--line-height: 22px;
+  --text-label: 14px;
+  --text-label--line-height: 20px;
+  --text-label--font-weight: 500;
+  --text-caption: 13px;
+  --text-caption--line-height: 18px;
+  --text-overline: 12px;
+  --text-overline--line-height: 16px;
+  --text-overline--font-weight: 500;
+  --text-overline--letter-spacing: 0.02em;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }

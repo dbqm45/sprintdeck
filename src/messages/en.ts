@@ -68,7 +68,51 @@ export const en = {
       medianNote: (median: string, card: string) =>
         `Median is ${median} — closest card is ${card}`,
       steps: (n: number) => `${n} ${n === 1 ? "step" : "steps"} apart`,
+      headers: ["Signal", "Value"] as [string, string],
+      votesCaption: (unknown: number, breaks: number) =>
+        unknown + breaks === 0 ? "All numeric" : `Plus ${unknown} “?” and ${breaks} ☕`,
     },
+    chart: {
+      half: (n: number) => `Half the team · ${n} ${n === 1 ? "vote" : "votes"}`,
+      summary: (entries: string[]) =>
+        entries.length ? `Vote distribution — ${entries.join(", ")}` : "Vote distribution — no numeric votes",
+      nonNumeric: (unknown: number, breaks: number) =>
+        [unknown && `${unknown} × “?”`, breaks && `${breaks} × ☕`].filter(Boolean).join(" · ") +
+        " — not shown in the chart",
+    },
+  },
+  landing: {
+    nav: { simulator: "Simulator" },
+    overline: "Planning Poker with a Consensus Engine",
+    hero: ["Don't just collect votes.", "Reach a shared decision."],
+    lead:
+      "Sprintdeck shows your team why estimates differ — outliers, two camps, hidden uncertainty — " +
+      "and suggests the questions worth asking before you commit.",
+    preview: {
+      title: "Payment retries · revealed",
+      votes: "Anna:5, Ben:5, Cleo:3, Dan:21, Eve:5, Filip:3, Gosia:2, Hubert:5",
+    },
+    start: {
+      title: "Try it on your last refinement",
+      body:
+        "Rooms for live sessions are on the way. Meanwhile, paste the votes from a real refinement " +
+        "and see how the Consensus Engine reads them.",
+      cta: "Open the simulator",
+    },
+    steps: [
+      {
+        title: "Vote in secret",
+        body: "Everyone picks a card. Nobody sees a value until the host reveals — no anchoring.",
+      },
+      {
+        title: "See why you disagree",
+        body: "The Consensus Engine reads the spread: neighbours, an outlier, two camps or wide uncertainty.",
+      },
+      {
+        title: "Decide together",
+        body: "Discuss the suggested questions, re-vote if needed, confirm the estimate and export the session.",
+      },
+    ],
   },
   simulator: {
     title: "Consensus Engine simulator",
@@ -80,6 +124,12 @@ export const en = {
     examples: "Examples",
     addCard: "Add a card",
     clear: "Clear",
+    back: "Back to start",
+    analysis: "Analysis",
+    suggested: "suggested",
+    noSuggestion: "No suggestion yet",
+    tabsLabel: "Analysis details",
+    statistics: "Statistics",
     distribution: "Distribution",
     questions: "Questions to discuss",
     noQuestions: "Nothing to discuss — you can confirm the estimate.",
