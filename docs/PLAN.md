@@ -5,6 +5,15 @@
 > Wszystko oznaczone jako **[DECYZJA]** to rekomendacja do potwierdzenia,
 > a **[OTWARTE]** to pytanie, które trzeba rozstrzygnąć.
 
+## 0. Rejestr decyzji
+
+| Data | Decyzja |
+|---|---|
+| 2026-10-25 | Język interfejsu: **angielski** (wszystkie teksty UI, komunikaty silnika i pytania pomocnicze). Dokumentacja wewnętrzna może zostać po polsku. |
+| 2026-10-25 | Głosy po odkryciu są **imienne**. |
+| 2026-10-25 | Dane w **UE (Supabase Frankfurt, `eu-central-1`)**; pokoje **usuwane trwale po 90 dniach nieaktywności**. |
+| 2026-10-25 | MVP realizuje **jedna osoba** → priorytet prostoty, linia cięcia z sekcji 7 obowiązuje. |
+
 ---
 
 ## 1. Podsumowanie i główne wnioski z analizy
@@ -26,8 +35,9 @@
 6. **Uczestnicy bez konta = Supabase Anonymous Sign-In.** Każda przeglądarka
    dostaje prawdziwe `auth.uid()`, dzięki czemu RLS działa natywnie, a
    odświeżenie strony zachowuje tożsamość „za darmo”.
-7. **Harmonogram 5 tygodni jest realny dla 1 osoby tylko przy twardym cięciu
-   zakresu** — backlog jest podzielony na Must / Should / Could (sekcja 7).
+7. **Harmonogram 5 tygodni przy jednej osobie jest realny tylko przy twardym
+   cięciu zakresu** — backlog jest podzielony na Must / Should / Could (sekcja 7),
+   a wywiady z tygodnia 1 prowadzimy równolegle z kodem (sekcja 8).
 
 ---
 
@@ -51,14 +61,14 @@ Koniec:      podsumowanie sesji (lista zadań z estymatami) + eksport
 |---|---|
 | Kto zatwierdza wynik | Tylko prowadzący (spec: „zespół lub prowadzący” — głosowanie nad zatwierdzeniem odkładamy). |
 | Czy prowadzący głosuje | Tak, domyślnie. Każdy może przełączyć się w tryb **obserwatora** (np. PO, który tylko wyjaśnia). |
-| Czy głosy po odkryciu są imienne | Tak (standard Planning Poker, potrzebne do pytań typu „co widzi osoba z 21?”). Tryb anonimowy → później. |
+| Czy głosy po odkryciu są imienne | **Tak — zatwierdzone.** Potrzebne do pytań typu „What does Anna (21) see?”. Tryb anonimowy → ewentualnie po MVP. |
 | Zmiana głosu | Dozwolona do momentu odkrycia. Po odkryciu runda jest zamrożona. |
 | Odkrycie przy brakujących głosach | Dozwolone (prowadzący decyduje), UI pokazuje „4/6 zagłosowało”. |
 | Zadania | Dodawane ręcznie (tytuł + opcjonalny opis/link). Import z Jiry → poza MVP. |
 | Talia | Tylko Fibonacci `0, ½, 1, 2, 3, 5, 8, 13, 21, ?, ☕`. Model danych przygotowany na inne talie. |
 | Utrata prowadzącego | Prowadzący może przekazać rolę. Dodatkowo: **sekretny link prowadzącego** (pokazany raz przy tworzeniu) pozwala odzyskać rolę z innego urządzenia. |
 | „Trwały zapis wyniku” | Wyniki zapisane w DB + eksport sesji (kopiuj jako Markdown / CSV). Eksport to też tani test hipotezy „przenoszenia do Jiry”. |
-| Retencja | Pokój nieaktywny 90 dni → archiwizacja/usunięcie. **[OTWARTE]** |
+| Retencja | **Zatwierdzone:** pokój bez aktywności przez 90 dni jest trwale usuwany (kaskadowo z uczestnikami, zadaniami, rundami, głosami, notatkami) — szczegóły w sekcji 3.6. |
 
 ### 2.3. Poza zakresem MVP (świadomie)
 
@@ -76,7 +86,8 @@ Jira/Linear, własne talie, timer, czat, płatności, panel analityczny EM.
 - **Supabase**: Postgres, Auth (anonymous sign-in), Realtime (Broadcast + Presence).
 - Testy: **Vitest** (engine, logika), **pgTAP** przez `supabase test db` (RLS i RPC),
   **Playwright** (E2E, wielu uczestników w osobnych kontekstach przeglądarki).
-- Hosting: **Vercel + Supabase Cloud w regionie UE (Frankfurt)** — RODO. **[DECYZJA]**
+- Hosting: **Supabase Cloud w regionie UE (Frankfurt, `eu-central-1`)** + **Vercel** z funkcjami w regionie `fra1` (zgodnie z bazą — mniejsze opóźnienia i dane przetwarzane w UE).
+- i18n: teksty UI w jednym słowniku (`src/messages/en.ts`) od pierwszego dnia — tylko EN w MVP, ale bez twardo wpisanych napisów w komponentach.
 - CI: GitHub Actions — lint, typecheck, Vitest, testy DB (Supabase CLI w Dockerze), Playwright.
 
 ### 3.2. Kluczowa decyzja: wszystkie zapisy przez funkcje RPC w Postgresie
@@ -141,7 +152,25 @@ Test bezpieczeństwa (pgTAP + E2E): uczestnik B nie może w żaden sposób
 - Walidacja nicków (1–32 znaki, trim, bez znaków sterujących), limit długości opisów/notatek.
 - Nagłówki bezpieczeństwa (CSP) w Next.js.
 
-### 3.6. Struktura repozytorium
+### 3.6. Retencja i RODO
+
+- `rooms.last_activity_at` aktualizowane przez każde RPC zmieniające stan pokoju
+  (dołączenie, głos, odkrycie, zatwierdzenie, dodanie zadania).
+- Codzienne zadanie **`pg_cron`** w bazie: `delete from rooms where last_activity_at < now() - interval '90 days'`
+  — usuwanie kaskadowe (FK `on delete cascade`).
+- To samo zadanie usuwa **anonimowych użytkowników Auth**, którzy nie należą już do
+  żadnego pokoju i są nieaktywni > 90 dni.
+- Prowadzący widzi w pokoju informację „Rooms are deleted after 90 days of inactivity”
+  i może pobrać eksport przed usunięciem.
+- Minimalizacja danych: zbieramy tylko nick i treść zadań/notatek; brak e-maili,
+  brak IP w tabelach aplikacji. Analityka produktowa bez cookies śledzących
+  (zdarzenia zapisywane we własnej tabeli w tej samej bazie w UE).
+- Polityka prywatności (EN) opisująca: administratora, cel, zakres danych, okres
+  90 dni, podprzetwarzających (Supabase, Vercel, Cloudflare Turnstile) i region UE.
+- Opcjonalnie dla prowadzącego: „Delete room now” (natychmiastowe usunięcie) — Should.
+- Test pgTAP: zadanie retencji usuwa wyłącznie pokoje starsze niż 90 dni.
+
+### 3.7. Struktura repozytorium
 
 ```
 sprintdeck/
@@ -149,6 +178,7 @@ sprintdeck/
 │  ├─ app/
 │  │  ├─ page.tsx                # landing + tworzenie pokoju
 │  │  └─ r/[slug]/page.tsx       # pokój (dołączenie + widok sesji)
+│  ├─ messages/en.ts             # wszystkie teksty UI (EN)
 │  ├─ components/                # UI: karty, lista uczestników, panel wyników…
 │  ├─ features/room/             # store stanu pokoju, hooki realtime, akcje RPC
 │  └─ lib/
@@ -325,9 +355,25 @@ nie całą listę.
 | high_uncertainty | „Czego brakuje, żeby móc oszacować?”, „Czy potrzebujemy doprecyzowania z PO albo spike'a?” |
 | large_item | „Czy da się podzielić to zadanie na mniejsze?” |
 
-Komunikaty stanów zgodnie ze specyfikacją: A „Pełna zgodność”,
-B „Warto sprawdzić różnice w założeniach”, C „Przed zatwierdzeniem warto
-omówić różnice”, D „Za mało głosów, by wyciągać wnioski”.
+Komunikaty stanów (UI po angielsku):
+
+| Stan | Komunikat |
+|---|---|
+| A | „Full consensus” |
+| B | „Worth checking the differences in assumptions” |
+| C | „Discuss the differences before you decide” |
+| D | „Not enough votes to draw conclusions” |
+
+Bank pytań w UI (EN):
+
+| Wzorzec / flaga | Questions |
+|---|---|
+| adjacent | “What makes this a {lower} rather than a {higher}?” · “Does the estimate include testing and deployment?” |
+| outlier | “What does {name} ({value}) see that the rest of us don't?” · “Have we considered dependencies on other systems?” · “Are there extra risks or edge cases?” |
+| polarized | “Do we all understand the scope the same way?” · “Are both groups assuming the same technical approach?” · “Are the acceptance criteria precise enough?” |
+| wide | “Do we all understand the scope the same way?” · “Is this item too big — should we split it?” |
+| high_uncertainty | “What's missing for us to estimate this?” · “Do we need clarification from the PO or a spike?” |
+| large_item | “Can we split this into smaller items?” |
 
 W widoku rundy n+1 pokazujemy porównanie z rundą n (np. „rozrzut: 4 → 1 krok”).
 
@@ -349,8 +395,9 @@ W widoku rundy n+1 pokazujemy porównanie z rundą n (np. „rozrzut: 4 → 1 kr
 Wymagania: mobile-first (duże pola dotyku kart), obsługa klawiatury
 (`1–9` wybór karty, `R` odkryj — dla prowadzącego), `aria-pressed` na kartach,
 tryb jasny/ciemny.
-Język UI: **[OTWARTE]** — rekomendacja: polski w MVP (rozmowy walidacyjne),
-ale wszystkie teksty od początku w słowniku, żeby dodać EN bez refaktoru.
+Język UI: **angielski** (zatwierdzone). Wszystkie teksty w `src/messages/en.ts`.
+Wywiady walidacyjne mogą być po polsku — symulator i makiety pokazujemy po angielsku,
+żeby od razu sprawdzić zrozumiałość komunikatów.
 
 ---
 
@@ -367,6 +414,7 @@ ale wszystkie teksty od początku w słowniku, żeby dodać EN bez refaktoru.
 - M8 Ponowne głosowanie + historia rund.
 - M9 Zatwierdzenie estymaty + notatka.
 - M10 Testy E2E: 6–10 uczestników, rozłączenie/powrót, próby ataków na ukryte głosy.
+- M11 Retencja 90 dni (`pg_cron`) + polityka prywatności (wymóg RODO przed pierwszym pilotażem).
 
 **Should**
 - S1 Obserwator, przekazanie roli prowadzącego, sekretny link prowadzącego.
@@ -383,6 +431,14 @@ ale wszystkie teksty od początku w słowniku, żeby dodać EN bez refaktoru.
 **Linia cięcia**: jeśli tydzień 4 się opóźni, S1/S2/S4 przechodzą po MVP;
 S3 zostaje przed publicznym udostępnieniem linku.
 
+**Zasady pracy w pojedynkę**
+- Jeden branch na funkcję, małe PR-y z CI jako „drugim recenzentem”;
+  automatyczny code review (np. Claude) zamiast przeglądu przez współpracownika.
+- Najpierw pionowy przekrój (cały przepływ w brzydkiej wersji), potem szlif UI.
+- Bez własnych komponentów, gdy jest gotowy (shadcn/ui), bez własnego backendu poza Supabase.
+- Zero „infrastruktury na zapas”: brak organizacji/teams, brak kolejek, brak cache.
+- Timebox: jeśli zadanie Must przekracza plan o > 50%, upraszczamy je, a nie przesuwamy resztę.
+
 ---
 
 ## 8. Harmonogram (zmodyfikowany)
@@ -392,6 +448,9 @@ scaffolding startują równolegle z walidacją w tygodniu 1 — nie zależą od
 wyników rozmów, a działający „symulator” silnika podnosi jakość wywiadów.
 
 ### Tydzień 1 — walidacja + prototyp silnika
+Przy jednej osobie: wywiady to głównie czas kalendarzowy (umawianie), więc
+**rekrutację rozmówców startujemy pierwszego dnia**, a rozmowy (5–8 × ~45 min)
+przeplatamy z kodowaniem silnika. Część rozmów może spaść na tydzień 2 — to OK.
 - Scenariusz wywiadu (problemy z sekcji 2 specyfikacji jako hipotezy do zbicia),
   rekrutacja i 5–8 rozmów ze Scrum Masterami.
 - Implementacja `lib/consensus` + tabela przypadków testowych.
@@ -413,7 +472,7 @@ wyników rozmów, a działający „symulator” silnika podnosi jakość wywiad
 - **Wynik**: kompletny przepływ od utworzenia pokoju do zatwierdzonej estymaty i eksportu.
 
 ### Tydzień 5 — testy i stabilizacja
-- M10, S3, S5. Test obciążeniowy (np. 10 pokoi × 10 uczestników).
+- M10, M11, S3, S5. Test obciążeniowy (np. 10 pokoi × 10 uczestników).
 - 2–3 sesje użyteczności na prawdziwych refinementach (zespoły z tygodnia 1).
 - Poprawki, deploy produkcyjny, polityka prywatności.
 - **Wynik**: MVP gotowe do pilotażu z kilkoma zespołami.
@@ -445,16 +504,17 @@ mobile (≥ 360 px); żadna wartość głosu nie trafia do klienta przed odkryci
 | Utrata sesji prowadzącego | średni | Przekazanie roli + sekretny link prowadzącego. |
 | Nadużycia anonimowego logowania | średni | Turnstile, limity w RPC, czyszczenie nieaktywnych użytkowników anonimowych. |
 | Limity planu darmowego Supabase | niski w MVP | Monitorowanie połączeń realtime; przejście na plan Pro przed pilotażem z wieloma zespołami. |
-| Harmonogram 5 tyg. przy 1 osobie | średni | Linia cięcia z sekcji 7. |
+| Harmonogram 5 tyg. przy jednej osobie | średni | Linia cięcia i zasady pracy w pojedynkę z sekcji 7; wywiady równolegle z kodem. |
+| Brak drugiej pary oczu przy bezpieczeństwie | średni | Testy pgTAP dla każdej polityki RLS i RPC, automatyczny security review PR-ów. |
 
 ---
 
 ## 11. Pytania otwarte
 
-1. Język interfejsu MVP (PL / EN / oba)?
-2. Czy głosy po odkryciu mają być imienne (rekomendacja: tak)?
-3. Czy prowadzący ma móc działać bez konta także w docelowej wersji płatnej?
-4. Retencja danych pokoi i wymagania RODO (region UE — rekomendacja: Frankfurt).
-5. Ile osób realizuje MVP i czy termin 5 tygodni jest sztywny?
-6. Zaokrąglanie mediany przy remisie — w górę (rekomendacja) czy w dół?
-7. Domena / nazwa produkcyjna i konto Vercel/Supabase — kto zakłada?
+Rozstrzygnięte: język (EN), imienne głosy (tak), region i retencja (Frankfurt, 90 dni),
+zasoby (jedna osoba) — patrz sekcja 0.
+
+1. Czy termin 5 tygodni jest sztywny, czy to cel orientacyjny?
+2. Czy prowadzący ma móc działać bez konta także w docelowej wersji płatnej?
+3. Zaokrąglanie mediany przy remisie — w górę (rekomendacja) czy w dół?
+4. Domena produkcyjna oraz konta Vercel/Supabase (do założenia przez Ciebie przed tygodniem 2).
