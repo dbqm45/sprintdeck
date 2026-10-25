@@ -13,6 +13,9 @@
 | 2026-10-25 | Głosy po odkryciu są **imienne**. |
 | 2026-10-25 | Dane w **UE (Supabase Frankfurt, `eu-central-1`)**; pokoje **usuwane trwale po 90 dniach nieaktywności**. |
 | 2026-10-25 | MVP realizuje **jedna osoba** → priorytet prostoty, linia cięcia z sekcji 7 obowiązuje. |
+| 2026-10-25 | Harmonogram 5 tygodni jest **orientacyjny** (brak deadline'u) — tygodnie traktujemy jako kolejne kamienie milowe, nie daty. |
+| 2026-10-25 | Mediana między kartami → **najbliższa karta, remis w górę** (np. 3 i 5 → mediana 4 → rekomendacja 5). |
+| 2026-10-25 | Rozwój **lokalnie** (Supabase CLI w Dockerze); konta Vercel/Supabase Cloud i domena dopiero przed pierwszym wdrożeniem (sekcja 8 — „Kiedy potrzebna infrastruktura”). |
 
 ---
 
@@ -303,7 +306,7 @@ type RoundAnalysis = {
   wystąpiła raz → „brak dominanty”.
 - **Rekomendacja = mediana.** Jeśli mediana nie należy do talii (np. 3 i 5 → 4),
   pokazujemy „mediana: 4” i osobno „najbliższa karta: 5”.
-  Remis odległości → **w górę** (estymaty statystycznie częściej są zaniżone). **[DECYZJA]**
+  Remis odległości → **w górę** (estymaty statystycznie częściej są zaniżone). **Zatwierdzone.**
 
 ### 5.2. Klasyfikacja rozbieżności (na indeksach talii, nie na wartościach)
 
@@ -477,6 +480,14 @@ przeplatamy z kodowaniem silnika. Część rozmów może spaść na tydzień 2 �
 - Poprawki, deploy produkcyjny, polityka prywatności.
 - **Wynik**: MVP gotowe do pilotażu z kilkoma zespołami.
 
+### Kiedy potrzebna infrastruktura
+
+| Moment | Potrzebne |
+|---|---|
+| Tydzień 1–4 | Nic poza lokalnym środowiskiem (Node, Docker, Supabase CLI). |
+| Pierwsze sesje użyteczności z zespołami (tydz. 5) | Projekt **Supabase Cloud (Frankfurt)** + **Vercel** — link musi działać poza localhost. Domena opcjonalna (wystarczy `*.vercel.app`). |
+| Pilotaż / publiczny link | Domena produkcyjna, klucze Cloudflare Turnstile, polityka prywatności pod stałym adresem. |
+
 ### Definition of Done (dla każdego zadania)
 Typecheck i lint czyste; testy jednostkowe/DB dla nowej logiki; działa na
 mobile (≥ 360 px); żadna wartość głosu nie trafia do klienta przed odkryciem.
@@ -512,9 +523,9 @@ mobile (≥ 360 px); żadna wartość głosu nie trafia do klienta przed odkryci
 ## 11. Pytania otwarte
 
 Rozstrzygnięte: język (EN), imienne głosy (tak), region i retencja (Frankfurt, 90 dni),
-zasoby (jedna osoba) — patrz sekcja 0.
+zasoby (jedna osoba), harmonogram (orientacyjny), mediana (remis w górę),
+infrastruktura (lokalnie do tyg. 5) — patrz sekcja 0.
 
-1. Czy termin 5 tygodni jest sztywny, czy to cel orientacyjny?
-2. Czy prowadzący ma móc działać bez konta także w docelowej wersji płatnej?
-3. Zaokrąglanie mediany przy remisie — w górę (rekomendacja) czy w dół?
-4. Domena produkcyjna oraz konta Vercel/Supabase (do założenia przez Ciebie przed tygodniem 2).
+1. Czy prowadzący ma móc działać bez konta także w docelowej wersji płatnej?
+   Nierozstrzygnięte — nie blokuje MVP. Anonymous auth pozwala później podpiąć
+   konto do istniejącej sesji bez utraty danych.
