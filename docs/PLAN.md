@@ -282,6 +282,7 @@ silnikiem. Dzięki temu poprawki progów nie wymagają migracji danych historycz
 ## 5. Consensus Engine — specyfikacja implementacyjna
 
 Moduł `src/lib/consensus`, czyste funkcje, zero zależności, 100% pokrycia testami.
+**Status: zaimplementowany** (progi w `src/lib/consensus/config.ts`, przypadki w `analyze.test.ts`), symulator pod `/simulator`.
 
 ```ts
 analyzeRound(votes: VoteValue[], deck: Deck): RoundAnalysis
@@ -321,8 +322,10 @@ Algorytm (progi w jednym obiekcie konfiguracyjnym, do kalibracji):
 2. `spread = maxIdx − minIdx`. Jeśli `0` → **A** (`unanimous`).
 3. Szukamy **luk**: sąsiednie użyte indeksy oddalone o ≥ 2 kroki (pusta karta pomiędzy).
    - Jeśli po obu stronach luki jest ≥ 25% głosów → **C** (`polarized`) — dwa obozy.
-   - Jeśli po jednej stronie jest < 25% głosów → to **odstające głosy**; wyłączamy je
-     i liczymy spread reszty. Reszta ≤ 2 kroki → **B** (`outlier`).
+   - Jeśli po jednej stronie jest < 25% głosów **albo pojedynczy głos przy ≥ 3 głosach
+     liczbowych** → to **odstające głosy**; wyłączamy je i liczymy spread reszty.
+     Reszta ≤ 2 kroki i odstające ≤ ⅓ wszystkich głosów → **B** (`outlier`),
+     w przeciwnym razie **C** (`wide`).
 4. Spread ≤ 2 bez luk → **B** (`adjacent`).
 5. W pozostałych przypadkach (spread ≥ 3) → **C** (`wide`).
 
