@@ -21,6 +21,12 @@ describe("room errors", () => {
     expect(errorMessage({ message: "not_host" })).toBe("Only the host can do that.");
   });
 
+  it("recognizes a rejected human check", () => {
+    expect(errorCode({ message: "captcha protection: request disallowed (invalid-input-response)" })).toBe(
+      "captcha_failed",
+    );
+  });
+
   it("falls back for anything unexpected", () => {
     expect(errorCode(new Error("fetch failed"))).toBe("unknown");
     expect(errorCode({ message: "unknown" })).toBe("unknown");

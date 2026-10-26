@@ -1,6 +1,7 @@
 "use client";
 
 import { use } from "react";
+import { HumanCheck } from "@/components/ui/human-check";
 import { en } from "@/messages/en";
 import { JoinScreen } from "./join-screen";
 import { RoomMessage } from "./room-message";
@@ -19,6 +20,12 @@ export function RoomRoute({ params }: { params: Promise<{ slug: string }> }) {
       return <RoomMessage text={room.error ?? t.loading} />;
     case "config_error":
       return <RoomMessage text={t.configError} />;
+    case "verify":
+      return (
+        <RoomMessage title={t.verify.title} text={room.error ?? t.verify.body}>
+          <HumanCheck onToken={room.actions.verify} />
+        </RoomMessage>
+      );
     case "not_found":
       return <RoomMessage title={t.notFound.title} text={t.notFound.body} action={{ href: "/", label: t.notFound.back }} />;
     case "join":

@@ -123,6 +123,7 @@ export type RoomErrorCode =
   | "round_not_found"
   | "round_not_voting"
   | "round_in_progress"
-  | "observers_cannot_vote";
+  | "observers_cannot_vote"
+  | "room_full";
 
 export const roomChannel = (roomId: string) => `room:${roomId}`;

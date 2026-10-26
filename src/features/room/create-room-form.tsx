@@ -1,12 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
+import { HumanCheck, TURNSTILE_SITE_KEY } from "@/components/ui/human-check";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { TextField } from "@/components/ui/text-field";
 import { DECKS, type DeckId } from "@/lib/deck";
-import { ensureSession, getBrowserClient } from "@/lib/supabase/client";
+import { ensureSession, getBrowserClient, hasSession } from "@/lib/supabase/client";
 import type { CreatedRoom } from "@/lib/supabase/rooms";
 import { en } from "@/messages/en";
 import { errorMessage } from "./errors";
@@ -32,6 +33,25 @@ export function CreateRoomForm() {
   const [error, setError] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // With bot protection on, a visitor without a session passes the human check before creating a room.
+  const [needsCheck, setNeedsCheck] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [checkKey, setCheckKey] = useState(0);
+
+  useEffect(() => {
+    if (!TURNSTILE_SITE_KEY) return;
+    let cancelled = false;
+    try {
+      void hasSession(getBrowserClient()).then((signedIn) => {
+        if (!cancelled) setNeedsCheck(!signedIn);
+      });
+    } catch {
+      // not configured: the submit shows the configuration error
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const create = async (event: FormEvent) => {
     event.preventDefault();
@@ -39,7 +59,7 @@ export function CreateRoomForm() {
     setError(null);
     try {
       const client = getBrowserClient();
-      await ensureSession(client);
+      await ensureSession(client, captchaToken ?? undefined);
       const { data, error: rpcError } = await client.rpc("create_room", {
         p_title: title,
         p_display_name: name,
@@ -55,6 +75,14 @@ export function CreateRoomForm() {
         ? en.room.configError
         : errorMessage(createError));
       setPending(false);
+      // A Turnstile token works once. If the sign-in went through, no new check is needed;
+      // otherwise get a fresh token for the next attempt.
+      if (needsCheck) {
+        const signedIn = await hasSession(getBrowserClient()).catch(() => false);
+        setNeedsCheck(!signedIn);
+        setCaptchaToken(null);
+        setCheckKey((key) => key + 1);
+      }
     }
   };
 
@@ -97,12 +125,18 @@ export function CreateRoomForm() {
           <SegmentedControl label={t.deck} options={DECK_OPTIONS} value={deck} onChange={setDeck} />
           <p className="m-0 text-caption text-ink-muted">{en.simulator.deckHint[deck]}</p>
         </div>
+        {needsCheck && <HumanCheck key={checkKey} onToken={setCaptchaToken} />}
         {error && (
           <p role="alert" className="m-0 text-caption text-negative">
             {error}
           </p>
         )}
-        <Button type="submit" variant="accent" block disabled={pending || !title.trim() || !name.trim()}>
+        <Button
+          type="submit"
+          variant="accent"
+          block
+          disabled={pending || !title.trim() || !name.trim() || (needsCheck && !captchaToken)}
+        >
           {pending ? t.creating : t.create}
         </Button>
       </form>

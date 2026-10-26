@@ -46,3 +46,22 @@ z `npx supabase status`). Testy E2E potrzebują tego samego oraz przeglądarki:
 - `supabase/migrations` — backend pokoi: tabele, RLS (tylko odczyt dla członków pokoju), funkcje RPC dla wszystkich zapisów, zdarzenia realtime na kanale `room:<id>`, retencja 90 dni (`pg_cron`).
 - `supabase/tests` — testy pgTAP.
 - `src/lib/supabase` — klient przeglądarki (sesja anonimowa), wygenerowane typy bazy i typy odpowiedzi RPC.
+
+## Przed publicznym linkiem: ochrona przed nadużyciami
+
+Limity działają zawsze (w bazie, `supabase/migrations/*_limits.sql`):
+
+- 120 zapisów na minutę na użytkownika (głosy, zadania, rundy, role, dołączenia) — człowiek do tego nie dochodzi, skrypt zalewający pokój tak;
+- 10 nowych pokoi i 30 dołączeń na godzinę na użytkownika, maks. 50 osób w pokoju, 200 zadań w pokoju;
+- anonimowe logowania: limit Supabase Auth na adres IP (`auth.rate_limit.anonymous_users`).
+
+**Cloudflare Turnstile** sprawdza, czy pierwsze anonimowe logowanie w przeglądarce robi człowiek
+(potem sesja zostaje w przeglądarce). Lokalnie jest wyłączony. Na produkcji:
+
+1. Cloudflare → Turnstile → dodaj widget dla domeny aplikacji (tryb *Managed*), zapisz *site key* i *secret key*.
+2. Supabase (projekt) → Authentication → Bot and Abuse Protection → włącz CAPTCHA, dostawca Turnstile, wklej *secret key*.
+3. Vercel (zmienne środowiskowe) → `NEXT_PUBLIC_TURNSTILE_SITE_KEY` = *site key*, potem nowy deploy.
+
+Kolejność ma znaczenie: z włączoną CAPTCHĄ w Supabase, a bez klucza w aplikacji nikt nowy się nie zaloguje.
+Testy E2E budują aplikację z testowym kluczem Cloudflare i podstawiają skrypt Turnstile, więc sprawdzają,
+że token trafia do Supabase Auth — samą weryfikację u Cloudflare robi Supabase.

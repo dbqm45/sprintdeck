@@ -1,13 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ensureSession, getBrowserClient, type SprintdeckClient } from "@/lib/supabase/client";
+import { TURNSTILE_SITE_KEY } from "@/components/ui/human-check";
+import { ensureSession, getBrowserClient, hasSession, type SprintdeckClient } from "@/lib/supabase/client";
 import { roomChannel, type ParticipantRole, type RoomPreview, type RoomState } from "@/lib/supabase/rooms";
 import { errorCode, errorMessage } from "./errors";
 
 export type RoomPhase =
   | { kind: "loading" }
   | { kind: "config_error" }
+  /** First visit with bot protection on: Turnstile before the anonymous sign-in. */
+  | { kind: "verify" }
   | { kind: "not_found" }
   | { kind: "join"; preview: RoomPreview }
   | { kind: "room"; state: RoomState };
@@ -78,7 +81,19 @@ export function useRoom(slug: string) {
     }
   }, [slug]);
 
-  // Sign in (anonymously, once per browser) and load the room.
+  // Signed in: authorize realtime and load the room.
+  const connect = useCallback(
+    async (client: SprintdeckClient, captchaToken?: string) => {
+      await ensureSession(client, captchaToken);
+      await client.realtime.setAuth();
+      clientRef.current = client;
+      await load();
+    },
+    [load],
+  );
+
+  // Sign in (anonymously, once per browser) and load the room. With bot
+  // protection on, a first-time visitor passes the human check first.
   useEffect(() => {
     let cancelled = false;
     async function start() {
@@ -90,10 +105,11 @@ export function useRoom(slug: string) {
         return;
       }
       hostSecretRef.current = hostSecretFromHash();
-      await ensureSession(client);
-      await client.realtime.setAuth();
-      clientRef.current = client;
-      if (!cancelled) await load();
+      if (TURNSTILE_SITE_KEY && !(await hasSession(client))) {
+        if (!cancelled) setPhase({ kind: "verify" });
+        return;
+      }
+      if (!cancelled) await connect(client);
     }
     start().catch((startError: unknown) => {
       if (!cancelled) setError(errorMessage(startError));
@@ -101,7 +117,16 @@ export function useRoom(slug: string) {
     return () => {
       cancelled = true;
     };
-  }, [load]);
+  }, [connect]);
+
+  const verify = useCallback(
+    (token: string | null) => {
+      if (!token) return;
+      setError(null);
+      connect(getBrowserClient(), token).catch((verifyError: unknown) => setError(errorMessage(verifyError)));
+    },
+    [connect],
+  );
 
   const roomId = phase.kind === "room" ? phase.state.room.id : null;
   const meId = phase.kind === "room" ? phase.state.me.participant_id : null;
@@ -193,8 +218,9 @@ export function useRoom(slug: string) {
       closeRoom: () =>
         roomId ? run((c) => c.rpc("close_room", { p_room_id: roomId })) : Promise.resolve(false),
       dismissError: () => setError(null),
+      verify,
     }),
-    [roomId, run, slug],
+    [roomId, run, slug, verify],
   );
 
   return { phase, error, pending, online, actions };

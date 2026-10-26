@@ -212,6 +212,8 @@ token_verifications = 30
 web3 = 30
 
 # Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
+# Sprintdeck: off locally (no Cloudflare needed); on in the Supabase Cloud project with
+# Turnstile and the secret, with NEXT_PUBLIC_TURNSTILE_SITE_KEY set for the app (README).
 # [auth.captcha]
 # enabled = true
 # provider = "hcaptcha"
