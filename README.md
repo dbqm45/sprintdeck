@@ -25,9 +25,13 @@ npm run dev        # http://localhost:3000 — symulator: /simulator
 | `npm run db:test` | testy bazy (pgTAP): RLS, RPC, ukryte głosy, retencja |
 | `npm run db:reset` | odtwarza bazę z migracji |
 | `npm run db:types` | regeneruje `src/lib/supabase/database.types.ts` po zmianie migracji |
+| `npm run db:env` | zapisuje klucze lokalnego Supabase do `.env.local` |
+| `npm run e2e` | testy end-to-end (Playwright): buduje aplikację, uruchamia ją i przechodzi przepływy z kilkoma uczestnikami |
 
-Backend pokoi wymaga Dockera. Po `npm run db:start` skopiuj `.env.example` do `.env.local`
-i wpisz `PUBLISHABLE_KEY` z wyjścia komendy (albo z `npx supabase status`).
+Backend pokoi wymaga Dockera. Po `npm run db:start` uruchom `npm run db:env` — zapisze klucze
+lokalnego Supabase do `.env.local` (ręcznie: skopiuj `.env.example` i wpisz `PUBLISHABLE_KEY`
+z `npx supabase status`). Testy E2E potrzebują tego samego oraz przeglądarki:
+`npx playwright install chromium` (raz).
 
 ## Struktura
 
