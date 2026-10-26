@@ -18,7 +18,7 @@ export type DivergencePattern =
   | "wide"
   | "insufficient";
 
-export type AnalysisFlag = "high_uncertainty" | "large_item" | "break_requested";
+export type AnalysisFlag = "high_uncertainty" | "large_item" | "high_risk" | "break_requested";
 
 export type QuestionId =
   | "lower_vs_higher"
@@ -31,7 +31,13 @@ export type QuestionId =
   | "acceptance_criteria"
   | "split_item"
   | "missing_info"
-  | "clarify_or_spike";
+  | "clarify_or_spike"
+  // Risk deck
+  | "outlier_knowledge"
+  | "how_to_verify"
+  | "what_breaks"
+  | "criteria_for_newcomer"
+  | "reduce_risk";
 
 export interface Question {
   id: QuestionId;

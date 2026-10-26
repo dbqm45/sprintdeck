@@ -19,6 +19,7 @@
 | 2026-10-25 | **Zmiana roli:** sprintdeck to narzędzie do **konsensusu co do zrozumienia i ryzyka**, nie do estymacji pracy. W zespołach, w których kod pisze AI, rozmiar i prognozę liczy automat (tf, ShipScope), a ludzie głosują tam, gdzie automat zgłasza wątpliwość. Silnik i mechanika pokoju bez zmian; dochodzi talia „Risk”, Fibonacci zostaje. Decyzja ekosystemu: pdi `docs/decyzje.md`, D-E1. Szczegóły: sekcja 12. |
 | 2026-10-25 | Backend pokoi (M2) zrobiony: `supabase/migrations/20261025150000_rooms.sql` + testy pgTAP. Zdarzenia realtime wysyła samo RPC (`private.emit`), a nie triggery — wszystkie zapisy i tak idą przez RPC. Ponowne głosowanie = `start_round` na tym samym zadaniu (osobne `revote` niepotrzebne). Dodatkowo: `get_room_preview` (ekran dołączenia), `set_current_item`, `skip_item`, `close_room`. |
 | 2026-10-26 | Talia „Risk” w backendzie i w `src/lib/deck.ts`: wartości `low`, `medium`, `high`, `very_high`, `?`, `break` (karty porządkowe, punkty = ranga 1–4). `create_room` przyjmuje talię (`fibonacci` domyślnie, `risk`); głosy i estymata są walidowane względem talii pokoju. Progi silnika, flaga `high_risk` i bank pytań dla tej talii (reszta S6) — osobno. |
+| 2026-10-26 | S6 zrobione w silniku: progi per talia (`configForDeck`; Risk: `maxClusteredSpread` = 1, `minGapSteps` zostaje 2, bo mniejszej luki nie ma), flaga `high_risk` od „High” zamiast `large_item`, bank pytań „risk” (zrozumienie i weryfikacja zamiast wysiłku), tabela przypadków w `analyze.test.ts`, wybór talii w symulatorze. Talia porządkowa (`ordinal`) pokazuje statystyki jako poziomy, bez średniej. |
 
 ---
 
@@ -569,7 +570,7 @@ Engine wykrywa właśnie takie różnice, więc zostaje rdzeniem produktu. Zmien
 ### 12.2. Co się zmienia w MVP
 
 Mechanika pokoju (zadania, rundy, ukryte głosy, odkrycie, ponowna runda, zatwierdzenie z notatką) i model danych
-zostają bez zmian. Dochodzi jedna pozycja w backlogu (S6):
+zostają bez zmian. Dochodzi jedna pozycja w backlogu (S6). **Status: zrobione** (rejestr decyzji, 2026-10-26):
 
 - **Talia „Risk”** w `src/lib/deck.ts`: `Low`, `Medium`, `High`, `Very high`, `?`, ☕. Pytanie rundy: „How risky is
   it to ship this as specified?”. Głos dotyczy ryzyka niezrozumienia, trudności weryfikacji i zasięgu skutków.

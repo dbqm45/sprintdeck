@@ -14,6 +14,8 @@ export interface Deck {
   id: string;
   name: string;
   cards: readonly Card[];
+  /** Points are only ranks (Low < Medium < …): show levels, not means or numeric ranges. */
+  ordinal?: boolean;
 }
 
 export const FIBONACCI_DECK: Deck = {
@@ -41,6 +43,7 @@ export const FIBONACCI_DECK: Deck = {
 export const RISK_DECK: Deck = {
   id: "risk",
   name: "Risk",
+  ordinal: true,
   cards: [
     { value: "low", label: "Low", kind: "numeric", points: 1 },
     { value: "medium", label: "Medium", kind: "numeric", points: 2 },

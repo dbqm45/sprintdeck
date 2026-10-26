@@ -10,6 +10,15 @@ const SIZES: Record<Size, string> = {
   lg: "h-[104px] w-[72px] text-[28px] leading-8",
 };
 
+// Word labels ("Very high") get a wider card with a smaller font.
+const WORD_SIZES: Record<Size, string> = {
+  sm: "h-16 min-w-16 px-3 text-label font-semibold",
+  md: "h-20 min-w-20 px-3 text-body font-semibold",
+  lg: "h-[104px] min-w-24 px-3 text-heading font-semibold",
+};
+
+const sizeClasses = (card: Card, size: Size) => (card.label.length > 2 ? WORD_SIZES[size] : SIZES[size]);
+
 const base = "inline-flex shrink-0 items-center justify-center rounded-md font-semibold tabular-nums";
 
 /** A card from the deck the player can pick. Selected = `aria-pressed`. */
@@ -27,7 +36,7 @@ export function PokerCard({
       aria-pressed={selected}
       className={cx(
         base,
-        SIZES[size],
+        sizeClasses(card, size),
         "border transition-[translate,box-shadow,background-color] duration-150 ease-out",
         selected
           ? "-translate-y-1.5 border-brand bg-brand text-on-brand shadow-lift"
