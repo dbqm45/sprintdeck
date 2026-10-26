@@ -289,8 +289,9 @@ export const en = {
       observers_cannot_vote: "Observers don't vote — switch to Vote first.",
       room_full: "This room is full (50 people).",
       captcha_failed: "The human check failed or expired. Try again.",
+      offline: "You're offline. The room catches up as soon as you're back — then try again.",
       unknown: "Something went wrong. Try again.",
-    } satisfies Record<RoomErrorCode | "captcha_failed" | "unknown", string>,
+    } satisfies Record<RoomErrorCode | "captcha_failed" | "offline" | "unknown", string>,
   },
   simulator: {
     title: "Consensus Engine simulator",

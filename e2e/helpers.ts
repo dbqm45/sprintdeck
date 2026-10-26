@@ -1,4 +1,11 @@
-import { test as base, expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Page,
+  type WebSocketRoute,
+} from "@playwright/test";
 
 export const TURNSTILE_TOKEN = "e2e-turnstile-token";
 
@@ -82,4 +89,38 @@ export function view(page: Page) {
 /** Clicks a card in the voting hand (or the estimate picker) by its label. */
 export function card(page: Page, label: string) {
   return page.getByRole("button", { name: label, exact: true });
+}
+
+/**
+ * A switch for one participant's network. `down()` cuts HTTP (offline mode) and
+ * closes the realtime websocket on both ends — Chromium's offline mode alone
+ * leaves an open websocket running — and refuses reconnects until `up()`.
+ */
+export async function networkSwitch(page: Page) {
+  let online = true;
+  const open = new Set<{ page: WebSocketRoute; server: WebSocketRoute }>();
+  await page.context().routeWebSocket(/\/realtime\/v1\/websocket/, (ws) => {
+    if (!online) {
+      void ws.close({ code: 1006, reason: "offline" });
+      return;
+    }
+    const pair = { page: ws, server: ws.connectToServer() };
+    open.add(pair);
+    ws.onClose(() => open.delete(pair));
+  });
+  return {
+    async down() {
+      online = false;
+      await page.context().setOffline(true);
+      for (const pair of open) {
+        await pair.server.close();
+        await pair.page.close({ code: 1006, reason: "offline" });
+      }
+      open.clear();
+    },
+    async up() {
+      await page.context().setOffline(false);
+      online = true;
+    },
+  };
 }

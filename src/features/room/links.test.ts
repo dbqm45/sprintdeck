@@ -27,6 +27,12 @@ describe("room errors", () => {
     );
   });
 
+  it("recognizes a request that never reached the server", () => {
+    expect(errorCode(new TypeError("Failed to fetch"))).toBe("offline");
+    expect(errorCode({ message: "TypeError: NetworkError when attempting to fetch resource." })).toBe("offline");
+    expect(errorCode({ message: "Load failed" })).toBe("offline");
+  });
+
   it("falls back for anything unexpected", () => {
     expect(errorCode(new Error("fetch failed"))).toBe("unknown");
     expect(errorCode({ message: "unknown" })).toBe("unknown");
