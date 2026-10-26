@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIBONACCI_DECK, numericCards } from "@/lib/deck";
+import { FIBONACCI_DECK, RISK_DECK, numericCards } from "@/lib/deck";
 import { analyzeRound, computeStats, nearestCard } from "./analyze";
 import type { Vote } from "./types";
 
@@ -149,5 +149,75 @@ describe("nearestCard", () => {
     [30, "21"],
   ])("%d → %s", (points, card) => {
     expect(nearestCard(scale, points).value).toBe(card);
+  });
+});
+
+describe("analyzeRound — Risk deck", () => {
+  const risk = (...values: string[]) => analyzeRound(votes(...values), RISK_DECK);
+
+  it.each([
+    // votes, state, pattern
+    [["low", "low", "low", "low"], "A_consensus", "unanimous"],
+    [["low", "low", "medium", "medium"], "B_moderate", "adjacent"],
+    [["high", "very_high"], "B_moderate", "adjacent"],
+    // Two levels apart with nobody in between is half the scale: wide, not clustered.
+    [["low", "medium", "high"], "C_high", "wide"],
+    [["low", "low", "high", "high"], "C_high", "polarized"],
+    [["low", "very_high"], "C_high", "polarized"],
+    [["low", "low", "low", "low", "very_high"], "B_moderate", "outlier"],
+    [["medium", "medium", "medium", "very_high"], "B_moderate", "outlier"],
+    [["low", "low", "medium", "medium", "very_high"], "B_moderate", "outlier"],
+    [["low", "medium", "medium", "high", "very_high"], "C_high", "wide"],
+    [["high", "?", "?", "?"], "D_insufficient", "insufficient"],
+    [["medium", "high", "?", "?"], "B_moderate", "adjacent"],
+  ] as const)("%j → %s / %s", (values, state, pattern) => {
+    const result = risk(...values);
+    expect(result.state).toBe(state);
+    expect(result.pattern).toBe(pattern);
+  });
+
+  it("recommends a level, rounding ties up", () => {
+    expect(risk("medium", "high").recommendation).toEqual({ median: 2.5, card: "high" });
+    expect(risk("low", "low", "medium").recommendation).toEqual({ median: 1, card: "low" });
+  });
+
+  it("flags high risk from High up, never large items", () => {
+    expect(risk("high", "very_high", "very_high").flags).toEqual(["high_risk"]);
+    expect(risk("medium", "medium").flags).toEqual([]);
+  });
+
+  it("asks about understanding and verification instead of effort", () => {
+    expect(risk("low", "low", "medium", "medium").questions).toEqual([
+      { id: "lower_vs_higher", values: ["low", "medium"] },
+      { id: "how_to_verify" },
+    ]);
+    expect(risk("low", "low", "high", "high").questions.map((q) => q.id)).toEqual([
+      "shared_scope",
+      "criteria_for_newcomer",
+      "how_to_verify",
+    ]);
+  });
+
+  it("asks what the outlier knows", () => {
+    expect(risk("low", "low", "low", "low", "very_high").questions).toEqual([
+      { id: "outlier_knowledge", values: ["very_high"], voterIds: ["v5"] },
+      { id: "what_breaks" },
+      { id: "risks_edge_cases" },
+    ]);
+  });
+
+  it("suggests making a risky item safer to ship", () => {
+    expect(risk("high", "high", "very_high").questions.map((q) => q.id)).toEqual([
+      "lower_vs_higher",
+      "how_to_verify",
+      "reduce_risk",
+    ]);
+  });
+
+  it("keeps the effort questions for Fibonacci", () => {
+    expect(analyzeRound(votes("3", "5", "5", "5")).questions.map((q) => q.id)).toEqual([
+      "lower_vs_higher",
+      "testing_deployment",
+    ]);
   });
 });

@@ -8,6 +8,8 @@ const ALIASES: Record<string, string> = {
   "☕": "break",
   coffee: "break",
   pause: "break",
+  "very high": "very_high",
+  "very-high": "very_high",
 };
 
 export interface ParsedVotes {

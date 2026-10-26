@@ -189,7 +189,7 @@ isOneToOne: false
 { Args: { "p_room_id": string }; Returns: undefined
                            },
 "create_room":
-{ Args: { "p_display_name": string,"p_title": string }; Returns: Json
+{ Args: { "p_deck"?: string,"p_display_name": string,"p_title": string }; Returns: Json
                            },
 "finalize_item":
 { Args: { "p_estimate": string,"p_item_id": string,"p_note"?: string }; Returns: undefined

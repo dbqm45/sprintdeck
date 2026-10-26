@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FIBONACCI_DECK } from "@/lib/deck";
+import { FIBONACCI_DECK, RISK_DECK } from "@/lib/deck";
 import { parseVotes } from "./parse-votes";
 
 describe("parseVotes", () => {
@@ -17,6 +17,12 @@ describe("parseVotes", () => {
   it("understands aliases for ½ and the break card", () => {
     const result = parseVotes("½; 1/2; ☕; coffee", FIBONACCI_DECK);
     expect(result.votes.map((v) => v.value)).toEqual(["0.5", "0.5", "break", "break"]);
+  });
+
+  it("reads Risk levels as written", () => {
+    const result = parseVotes("Anna:Low, Ben:very high, Cleo:Very_High, 5", RISK_DECK);
+    expect(result.votes.map((v) => v.value)).toEqual(["low", "very_high", "very_high"]);
+    expect(result.invalid).toEqual(["5"]);
   });
 
   it("collects entries that are not in the deck", () => {

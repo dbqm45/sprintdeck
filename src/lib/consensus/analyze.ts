@@ -1,5 +1,5 @@
 import { type Card, type Deck, FIBONACCI_DECK, findCard, numericCards } from "@/lib/deck";
-import { CONSENSUS_CONFIG, type ConsensusConfig } from "./config";
+import { type ConsensusConfig, configForDeck } from "./config";
 import { pickQuestions } from "./questions";
 import type {
   AnalysisFlag,
@@ -30,12 +30,13 @@ interface Classification {
  *
  * Distances are measured in deck steps rather than points, because the
  * Fibonacci scale is roughly logarithmic: 1 vs 2 and 8 vs 13 are the same
- * amount of disagreement.
+ * amount of disagreement. The same holds for ordinal decks such as Risk,
+ * whose thresholds come from `configForDeck`.
  */
 export function analyzeRound(
   votes: readonly Vote[],
   deck: Deck = FIBONACCI_DECK,
-  config: ConsensusConfig = CONSENSUS_CONFIG,
+  config: ConsensusConfig = configForDeck(deck),
 ): RoundAnalysis {
   const scale = numericCards(deck);
   const stepOf = new Map(scale.map((card, index) => [card.value, index]));
@@ -94,7 +95,12 @@ export function analyzeRound(
   }
 
   const recommendedCard = nearestCard(scale, stats.median);
-  if (recommendedCard.points! >= config.largeItemPoints) flags.push("large_item");
+  if (config.largeItemPoints !== null && recommendedCard.points! >= config.largeItemPoints) {
+    flags.push("large_item");
+  }
+  if (config.highRiskPoints !== null && recommendedCard.points! >= config.highRiskPoints) {
+    flags.push("high_risk");
+  }
 
   const { state, pattern, outliers } = classify(numeric, spreadSteps, config);
 

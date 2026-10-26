@@ -32,7 +32,7 @@ select ok(
   'RLS is enabled on every room table'
 );
 select ok(
-  not has_function_privilege('anon', 'public.create_room(text, text)', 'execute'),
+  not has_function_privilege('anon', 'public.create_room(text, text, text)', 'execute'),
   'anon (not signed in) cannot call RPCs'
 );
 

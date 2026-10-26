@@ -40,6 +40,7 @@ export const en = {
     flags: {
       high_uncertainty: "Many people can't estimate this yet",
       large_item: "This looks like a large item",
+      high_risk: "This looks risky to ship as specified",
       break_requested: "Someone asked for a break",
     } satisfies Record<AnalysisFlag, string>,
     questions: {
@@ -56,6 +57,12 @@ export const en = {
       split_item: () => "Is this item too big — should we split it?",
       missing_info: () => "What's missing for us to estimate this?",
       clarify_or_spike: () => "Do we need clarification from the PO or a spike?",
+      outlier_knowledge: ({ people }) =>
+        `What ${people.length === 1 ? "does" : "do"} ${list(people)} know about this that the rest of us don't?`,
+      how_to_verify: () => "How will we know it works?",
+      what_breaks: () => "What breaks if this is wrong?",
+      criteria_for_newcomer: () => "Are the acceptance criteria precise enough for someone who wasn't here?",
+      reduce_risk: () => "Can we make it safer to ship — smaller steps, a feature flag, a way back?",
     } satisfies Record<QuestionId, (params: QuestionParams) => string>,
     stats: {
       votes: "Votes",
@@ -118,9 +125,17 @@ export const en = {
     title: "Consensus Engine simulator",
     intro:
       "Enter the votes from a real refinement and see how Sprintdeck would read them. " +
-      "Use plain values (5, 8, ?, break) or name them (Anna:5).",
+      "Use the deck's values (5, 8, ?, break — or low, very high) and name them if you like (Anna:5).",
     inputLabel: "Votes",
-    inputPlaceholder: "Anna:3, Ben:5, Cleo:5, Dan:21, Eve:?",
+    inputPlaceholder: {
+      fibonacci: "Anna:3, Ben:5, Cleo:5, Dan:21, Eve:?",
+      risk: "Anna:low, Ben:medium, Cleo:high, Dan:?",
+    },
+    deck: "Deck",
+    deckHint: {
+      fibonacci: "How much work is it? Story points.",
+      risk: "How risky is it to ship this as specified?",
+    },
     examples: "Examples",
     addCard: "Add a card",
     clear: "Clear",
