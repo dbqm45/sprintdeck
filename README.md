@@ -65,3 +65,10 @@ Limity działają zawsze (w bazie, `supabase/migrations/*_limits.sql`):
 Kolejność ma znaczenie: z włączoną CAPTCHĄ w Supabase, a bez klucza w aplikacji nikt nowy się nie zaloguje.
 Testy E2E budują aplikację z testowym kluczem Cloudflare i podstawiają skrypt Turnstile, więc sprawdzają,
 że token trafia do Supabase Auth — samą weryfikację u Cloudflare robi Supabase.
+
+**Nagłówki bezpieczeństwa** (`src/lib/security-headers.ts`, podpięte w `next.config.ts`) idą z każdą odpowiedzią:
+Content Security Policy (skrypty tylko z tej domeny i Cloudflare Turnstile, połączenia tylko do tej domeny i Supabase,
+zakaz osadzania w ramkach), `Referrer-Policy`, `X-Content-Type-Options`, `X-Frame-Options`, `Permissions-Policy`, HSTS.
+CSP jest statyczny, bez nonce: nonce wymagałby renderowania każdej strony na żądanie, co wyłącza Partial Prerendering
+(`cacheComponents`). Dlatego skrypty i style mają `'unsafe-inline'`. Supabase w CSP bierze się z
+`NEXT_PUBLIC_SUPABASE_URL` w czasie budowania — po zmianie projektu Supabase potrzebny jest nowy build.
