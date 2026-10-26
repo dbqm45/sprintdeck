@@ -16,6 +16,7 @@
 | 2026-10-25 | Harmonogram 5 tygodni jest **orientacyjny** (brak deadline'u) — tygodnie traktujemy jako kolejne kamienie milowe, nie daty. |
 | 2026-10-25 | Mediana między kartami → **najbliższa karta, remis w górę** (np. 3 i 5 → mediana 4 → rekomendacja 5). |
 | 2026-10-25 | Rozwój **lokalnie** (Supabase CLI w Dockerze); konta Vercel/Supabase Cloud i domena dopiero przed pierwszym wdrożeniem (sekcja 8 — „Kiedy potrzebna infrastruktura”). |
+| 2026-10-25 | **Zmiana roli:** sprintdeck to narzędzie do **konsensusu co do zrozumienia i ryzyka**, nie do estymacji pracy. W zespołach, w których kod pisze AI, rozmiar i prognozę liczy automat (tf, ShipScope), a ludzie głosują tam, gdzie automat zgłasza wątpliwość. Silnik i mechanika pokoju bez zmian; dochodzi talia „Risk”, Fibonacci zostaje. Decyzja ekosystemu: pdi `docs/decyzje.md`, D-E1. Szczegóły: sekcja 12. |
 | 2026-10-25 | Backend pokoi (M2) zrobiony: `supabase/migrations/20261025150000_rooms.sql` + testy pgTAP. Zdarzenia realtime wysyła samo RPC (`private.emit`), a nie triggery — wszystkie zapisy i tak idą przez RPC. Ponowne głosowanie = `start_round` na tym samym zadaniu (osobne `revote` niepotrzebne). Dodatkowo: `get_room_preview` (ekran dołączenia), `set_current_item`, `skip_item`, `close_room`. |
 
 ---
@@ -69,7 +70,7 @@ Koniec:      podsumowanie sesji (lista zadań z estymatami) + eksport
 | Zmiana głosu | Dozwolona do momentu odkrycia. Po odkryciu runda jest zamrożona. |
 | Odkrycie przy brakujących głosach | Dozwolone (prowadzący decyduje), UI pokazuje „4/6 zagłosowało”. |
 | Zadania | Dodawane ręcznie (tytuł + opcjonalny opis/link). Import z Jiry → poza MVP. |
-| Talia | Tylko Fibonacci `0, ½, 1, 2, 3, 5, 8, 13, 21, ?, ☕`. Model danych przygotowany na inne talie. |
+| Talia | Fibonacci `0, ½, 1, 2, 3, 5, 8, 13, 21, ?, ☕` oraz talia „Risk” (S6, sekcja 12). Prowadzący wybiera talię przy tworzeniu pokoju. Która jest domyślna, rozstrzygają wywiady z tygodnia 1 (pytanie otwarte 2). |
 | Utrata prowadzącego | Prowadzący może przekazać rolę. Dodatkowo: **sekretny link prowadzącego** (pokazany raz przy tworzeniu) pozwala odzyskać rolę z innego urządzenia. |
 | „Trwały zapis wyniku” | Wyniki zapisane w DB + eksport sesji (kopiuj jako Markdown / CSV). Eksport to też tani test hipotezy „przenoszenia do Jiry”. |
 | Retencja | **Zatwierdzone:** pokój bez aktywności przez 90 dni jest trwale usuwany (kaskadowo z uczestnikami, zadaniami, rundami, głosami, notatkami) — szczegóły w sekcji 3.6. |
@@ -285,6 +286,8 @@ silnikiem. Dzięki temu poprawki progów nie wymagają migracji danych historycz
 Moduł `src/lib/consensus`, czyste funkcje, zero zależności, 100% pokrycia testami.
 **Status: zaimplementowany** (progi w `src/lib/consensus/config.ts`, przypadki w `analyze.test.ts`), symulator pod `/simulator`.
 
+Klasyfikacja liczy odległości w krokach talii, a nie w wartościach, więc działa dla każdej talii porządkowej, także dla talii „Risk” z sekcji 12. Talia o innej liczbie kroków potrzebuje własnych progów i własnego banku pytań.
+
 ```ts
 analyzeRound(votes: VoteValue[], deck: Deck): RoundAnalysis
 
@@ -429,6 +432,7 @@ Wywiady walidacyjne mogą być po polsku — symulator i makiety pokazujemy po a
 - S3 Limity nadużyć + Turnstile.
 - S4 Porównanie rundy n vs n+1.
 - S5 Minimalna analityka produktowa (zdarzenia do metryk z sekcji 9).
+- S6 Talia „Risk” z własnymi progami i bankiem pytań (sekcja 12.2).
 
 **Could**
 - C1 Skróty klawiszowe, tryb ciemny, animacje odkrycia.
@@ -458,7 +462,8 @@ wyników rozmów, a działający „symulator” silnika podnosi jakość wywiad
 Przy jednej osobie: wywiady to głównie czas kalendarzowy (umawianie), więc
 **rekrutację rozmówców startujemy pierwszego dnia**, a rozmowy (5–8 × ~45 min)
 przeplatamy z kodowaniem silnika. Część rozmów może spaść na tydzień 2 — to OK.
-- Scenariusz wywiadu (problemy z sekcji 2 specyfikacji jako hipotezy do zbicia),
+- Scenariusz wywiadu (problemy z sekcji 2 specyfikacji jako hipotezy do zbicia,
+  plus pytania o estymację w zespołach pracujących z AI z sekcji 12.4),
   rekrutacja i 5–8 rozmów ze Scrum Masterami.
 - Implementacja `lib/consensus` + tabela przypadków testowych.
 - **Symulator**: prosta strona „wpisz głosy → zobacz stan, wzorzec i pytania”.
@@ -506,6 +511,7 @@ mobile (≥ 360 px); żadna wartość głosu nie trafia do klienta przed odkryci
 - **Użycie wyróżników**: % zatwierdzeń z notatką; % rund z ponownym głosowaniem.
 - **Retencja**: % prowadzących, którzy utworzyli kolejny pokój w ciągu 14 dni.
 - **Jakościowo**: „Czy podpowiedzi pomogły w dyskusji?” (1–5) po sesji pilotażowej.
+- **Wybór talii**: % pokoi z talią „Risk” w zespołach, które deklarują, że kod pisze głównie AI, i w pozostałych.
 
 ---
 
@@ -520,6 +526,7 @@ mobile (≥ 360 px); żadna wartość głosu nie trafia do klienta przed odkryci
 | Nadużycia anonimowego logowania | średni | Turnstile, limity w RPC, czyszczenie nieaktywnych użytkowników anonimowych. |
 | Limity planu darmowego Supabase | niski w MVP | Monitorowanie połączeń realtime; przejście na plan Pro przed pilotażem z wieloma zespołami. |
 | Harmonogram 5 tyg. przy jednej osobie | średni | Linia cięcia i zasady pracy w pojedynkę z sekcji 7; wywiady równolegle z kodem. |
+| Estymacja pracy traci sens w zespołach, w których kod pisze AI | wysoki | Zmiana roli na konsensus co do zrozumienia i ryzyka (sekcja 12); hipoteza sprawdzana w wywiadach z tygodnia 1. |
 | Brak drugiej pary oczu przy bezpieczeństwie | średni | Testy pgTAP dla każdej polityki RLS i RPC, automatyczny security review PR-ów. |
 
 ---
@@ -533,3 +540,74 @@ infrastruktura (lokalnie do tyg. 5) — patrz sekcja 0.
 1. Czy prowadzący ma móc działać bez konta także w docelowej wersji płatnej?
    Nierozstrzygnięte — nie blokuje MVP. Anonymous auth pozwala później podpiąć
    konto do istniejącej sesji bez utraty danych.
+2. Która talia jest domyślna: Fibonacci czy „Risk”? Rozstrzygają wywiady z tygodnia 1
+   (sekcja 12.4). Nie blokuje budowy, bo talia jest parametrem pokoju.
+
+---
+
+## 12. Rola w procesie AI-native: konsensus co do zrozumienia i ryzyka
+
+Decyzja ekosystemu: pdi `docs/decyzje.md`, D-E1 (2026-10-25).
+
+### 12.1. Dlaczego
+
+Planning poker łączy cztery funkcje. Gdy kod pisze AI, trzy z nich przejmuje automat, a czwarta staje się
+ważniejsza niż dziś:
+
+| Funkcja | Kto ją przejmuje |
+|---|---|
+| Prognoza („kiedy to będzie?”) | automat: liczba cięć z planu tf × historyczny czas przepływu z ShipScope |
+| Rozmiar („czy to nie za duże?”) | automat: reguły kształtu historyjki w ci_for_sdlc (STORY-002), limit kawałków w Talosie |
+| Koszt kontra wartość | automat: raport kosztu Talosa (czas, tokeny, $) |
+| Wspólne zrozumienie („czy myślimy o tym samym?”) | **ludzie, w sprintdecku** |
+
+Wąskim gardłem przestaje być pisanie kodu, a stają się weryfikacja, decyzje i niepewność. AI zbuduje dokładnie to,
+co jest napisane, więc różnica w zrozumieniu, której nikt nie wychwycił, od razu zamienia się w zły kod. Consensus
+Engine wykrywa właśnie takie różnice, więc zostaje rdzeniem produktu. Zmienia się tylko to, nad czym zespół głosuje.
+
+### 12.2. Co się zmienia w MVP
+
+Mechanika pokoju (zadania, rundy, ukryte głosy, odkrycie, ponowna runda, zatwierdzenie z notatką) i model danych
+zostają bez zmian. Dochodzi jedna pozycja w backlogu (S6):
+
+- **Talia „Risk”** w `src/lib/deck.ts`: `Low`, `Medium`, `High`, `Very high`, `?`, ☕. Pytanie rundy: „How risky is
+  it to ship this as specified?”. Głos dotyczy ryzyka niezrozumienia, trudności weryfikacji i zasięgu skutków.
+- **Progi per talia** w `src/lib/consensus/config.ts`: talia „Risk” ma 4 kroki zamiast 9, więc
+  `maxClusteredSpread` i `minGapSteps` wymagają osobnych wartości. Flaga `large_item` nie dotyczy tej talii; w jej
+  miejsce flaga `high_risk` przy rekomendacji `High` i wyżej.
+- **Bank pytań per talia** w `src/lib/consensus/questions.ts` i `src/messages/en.ts`. Pytania o wysiłek („Does the
+  estimate include testing and deployment?”) zastępują pytania o zrozumienie i weryfikację, np. „What does {name}
+  ({value}) know about this that the rest of us don't?”, „How will we know it works?”, „What breaks if this is
+  wrong?”, „Are the acceptance criteria precise enough for someone who wasn't here?”.
+- **Testy** w `analyze.test.ts`: tabela przypadków dla talii „Risk”, tak jak dla Fibonacciego.
+- **Symulator** pozwala wybrać talię, żeby pokazywać ją w wywiadach.
+
+### 12.3. Po MVP (połączenia z ekosystemem)
+
+Wymagają kont, importu z Jiry i integracji, więc są poza zakresem MVP:
+
+| Co | Skąd dane | Po co |
+|---|---|---|
+| Szacunek automatu przy zadaniu (liczba cięć, koszt, przewidywany czas) | plan tf, raporty Talosa, ShipScope | ludzie widzą prognozę i nie liczą jej sami |
+| Głos AI jako uczestnik (oznaczony, nieimienny) | ten sam szacunek przełożony na kartę talii | rozbieżność „AI mówi Low, zespół mówi High” traktujemy jak głos odstający i pytamy o powód |
+| Sesja wyzwalana przez ci_for_sdlc | otwarte pytania, nowa domena, historyjka po podziale | ludzie spotykają się tylko tam, gdzie automat zgłasza wątpliwość |
+| Stan kształtu historyjki przed głosowaniem, „Zgłoś niejasność” po wyniku „dwa obozy” | ci_for_sdlc (plan G1/G2, krok G2.6) | rozbieżność staje się pytaniem przy historyjce |
+| Notatka z zatwierdzenia jako decyzja | rejestr pdi | uzasadnienie nie ginie po spotkaniu |
+| Kalibracja szacunku automatu | rzeczywisty czas z ShipScope | luka G3 z mapy ekosystemu |
+
+### 12.4. Pytania do wywiadów (tydzień 1)
+
+- Ile kodu w waszym zespole pisze dziś AI? Czy to się zmienia?
+- Czy nadal estymujecie? Jeśli tak, co właściwie oznacza wynik, gdy kod pisze agent?
+- Co zastąpiło estymację tam, gdzie ją porzuciliście (liczenie zadań, prognoza z historii, nic)?
+- Kiedy ostatnio zespół zbudował coś innego, niż miał na myśli PO? Czy rozmowa przy estymacji by to wychwyciła?
+- Pokaz w symulatorze: te same głosy na talii Fibonacciego i na talii „Risk”. Która rozmowa byłaby bardziej
+  przydatna?
+
+Wynik wywiadów rozstrzyga pytanie otwarte 2 (domyślna talia) i trafia do rejestru decyzji w sekcji 0.
+
+### 12.5. Czego nie zmieniamy
+
+- Talia Fibonacciego zostaje jako pełnoprawny tryb, m.in. dla zespołów, w których kod piszą ludzie.
+- Silnik nadal jest czystą, deterministyczną biblioteką bez zależności.
+- Linia cięcia z sekcji 7 obowiązuje: S6 przechodzi po MVP, jeśli tydzień 4 się opóźni.
