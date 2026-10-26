@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./helpers";
 
 test("the simulator reads votes on both decks", async ({ page }) => {
   await page.goto("/simulator");

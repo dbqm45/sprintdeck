@@ -132,6 +132,10 @@ export const en = {
   },
   room: {
     loading: "Loading the room…",
+    verify: {
+      title: "One quick check",
+      body: "Confirm you're a person to open the room. It only takes a moment.",
+    },
     configError: "Sprintdeck isn't connected to its database. Set the Supabase keys from .env.example.",
     notFound: {
       title: "This room doesn't exist",
@@ -283,8 +287,10 @@ export const en = {
       round_not_voting: "Voting on this round has ended.",
       round_in_progress: "Finish the current round first.",
       observers_cannot_vote: "Observers don't vote — switch to Vote first.",
+      room_full: "This room is full (50 people).",
+      captcha_failed: "The human check failed or expired. Try again.",
       unknown: "Something went wrong. Try again.",
-    } satisfies Record<RoomErrorCode | "unknown", string>,
+    } satisfies Record<RoomErrorCode | "captcha_failed" | "unknown", string>,
   },
   simulator: {
     title: "Consensus Engine simulator",

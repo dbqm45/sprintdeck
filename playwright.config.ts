@@ -2,6 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 const PORT = 3100;
 
+/** Cloudflare's public test site key; e2e/helpers.ts stands in for the Turnstile script. */
+export const TURNSTILE_TEST_SITE_KEY = "1x00000000000000000000AA";
+
 /**
  * End-to-end tests against a production build and the local Supabase stack
  * (`npm run db:start`, keys in .env.local — see README). Every test creates
@@ -25,5 +28,7 @@ export default defineConfig({
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 240_000,
+    // The build runs with bot protection on, so every test goes through the human check.
+    env: { NEXT_PUBLIC_TURNSTILE_SITE_KEY: TURNSTILE_TEST_SITE_KEY },
   },
 });

@@ -1,4 +1,33 @@
-import { expect, type Browser, type Page } from "@playwright/test";
+import { test as base, expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
+
+export const TURNSTILE_TOKEN = "e2e-turnstile-token";
+
+/**
+ * Stands in for Cloudflare's Turnstile script: renders nothing and hands out a
+ * token right away. The tests check our side — that the first anonymous sign-in
+ * carries the token. Cloudflare's own check happens in Supabase Auth.
+ */
+async function mockTurnstile(context: BrowserContext) {
+  await context.route("https://challenges.cloudflare.com/**", (route) =>
+    route.fulfill({
+      contentType: "application/javascript",
+      body: `window.turnstile = {
+        render(el, options) { setTimeout(() => options.callback(${JSON.stringify(TURNSTILE_TOKEN)}), 50); return "w"; },
+        remove() {},
+      };`,
+    }),
+  );
+}
+
+/** `test` with the Turnstile stand-in on the default page's context. */
+export const test = base.extend({
+  // The fixture callback is named `provide`, not Playwright's usual `use`, so the React hooks lint rule leaves it alone.
+  context: async ({ context }, provide) => {
+    await mockTurnstile(context);
+    await provide(context);
+  },
+});
+export { expect };
 
 /** A participant with their own browser context = their own anonymous user. */
 export async function person(
@@ -9,6 +38,7 @@ export async function person(
     colorScheme: options.colorScheme ?? "light",
     viewport: { width: options.width ?? 1280, height: 1000 },
   });
+  await mockTurnstile(context);
   return context.newPage();
 }
 

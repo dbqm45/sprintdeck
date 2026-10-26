@@ -1,5 +1,4 @@
-import { expect, test } from "@playwright/test";
-import { addItem, card, createRoom, joinRoom, person, view } from "./helpers";
+import { addItem, card, createRoom, expect, joinRoom, person, test, view } from "./helpers";
 
 test("a full session: create, join, vote with hidden cards, reveal, re-vote, confirm, summary", async ({
   browser,

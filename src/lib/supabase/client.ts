@@ -21,10 +21,17 @@ export function getBrowserClient(): SprintdeckClient {
   return browserClient;
 }
 
-/** Signs in anonymously unless this browser already has a session. */
-export async function ensureSession(client: SprintdeckClient): Promise<void> {
+export async function hasSession(client: SprintdeckClient): Promise<boolean> {
   const { data } = await client.auth.getSession();
-  if (data.session) return;
-  const { error } = await client.auth.signInAnonymously();
+  return data.session !== null;
+}
+
+/**
+ * Signs in anonymously unless this browser already has a session. With bot
+ * protection on, Supabase Auth requires the Turnstile token for that first sign-in.
+ */
+export async function ensureSession(client: SprintdeckClient, captchaToken?: string): Promise<void> {
+  if (await hasSession(client)) return;
+  const { error } = await client.auth.signInAnonymously(captchaToken ? { options: { captchaToken } } : undefined);
   if (error) throw error;
 }
