@@ -8,6 +8,7 @@ import { Wordmark } from "@/components/ui/wordmark";
 import { ConsensusBadge } from "@/features/consensus/consensus-badge";
 import { QuestionList } from "@/features/consensus/question-list";
 import { VoteDistribution } from "@/features/consensus/vote-distribution";
+import { CreateRoomForm } from "@/features/room/create-room-form";
 import { parseVotes } from "@/features/simulator/parse-votes";
 import { en } from "@/messages/en";
 
@@ -55,12 +56,8 @@ export default function Home() {
         </div>
 
         <Panel>
-          <PanelSection className="flex flex-col gap-5 p-8">
-            <h2 className="m-0 text-title">{t.start.title}</h2>
-            <p className="m-0 text-body text-ink-muted">{t.start.body}</p>
-            <Link href="/simulator" className={buttonClasses({ variant: "accent", block: true })}>
-              {t.start.cta}
-            </Link>
+          <PanelSection className="p-8">
+            <CreateRoomForm />
           </PanelSection>
         </Panel>
       </div>

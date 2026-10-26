@@ -38,6 +38,7 @@ i wpisz `PUBLISHABLE_KEY` z wyjścia komendy (albo z `npx supabase status`).
 - `src/features/consensus` — widoki wyniku Consensus Engine: wykres rozkładu głosów, statystyki, pytania, plakietka stanu.
 - `src/messages/en.ts` — wszystkie teksty interfejsu (EN).
 - `src/features/simulator` + `src/app/simulator` — symulator silnika do rozmów walidacyjnych.
+- `src/features/room` + `src/app/r/[slug]` — pokój: dołączenie, głosowanie, odkrycie z analizą silnika, zatwierdzenie, podsumowanie z eksportem. Formularz tworzenia pokoju jest na stronie głównej.
 - `supabase/migrations` — backend pokoi: tabele, RLS (tylko odczyt dla członków pokoju), funkcje RPC dla wszystkich zapisów, zdarzenia realtime na kanale `room:<id>`, retencja 90 dni (`pg_cron`).
 - `supabase/tests` — testy pgTAP.
 - `src/lib/supabase` — klient przeglądarki (sesja anonimowa), wygenerowane typy bazy i typy odpowiedzi RPC.

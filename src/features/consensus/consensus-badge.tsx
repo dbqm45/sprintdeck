@@ -10,7 +10,7 @@ const TONE: Record<ConsensusState, BadgeTone> = {
 };
 
 /** The Consensus Engine's verdict for a round. */
-export function ConsensusBadge({ state, size }: { state: ConsensusState; size?: "md" | "sm" }) {
+export function ConsensusBadge({ state, size }: { state: ConsensusState; size?: "md" | "sm" | "xs" }) {
   return (
     <Badge tone={TONE[state]} size={size}>
       {en.consensus.states[state]}

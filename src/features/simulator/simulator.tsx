@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { analyzeRound, type RoundAnalysis } from "@/lib/consensus";
-import { DECKS, type Deck, type DeckId, findCard, numericCards } from "@/lib/deck";
+import { DECKS, type Deck, type DeckId } from "@/lib/deck";
 import { Button } from "@/components/ui/button";
 import { Chip, Tag } from "@/components/ui/chip";
 import { Eyebrow, Panel, PanelSection } from "@/components/ui/panel";
@@ -11,9 +11,10 @@ import { SegmentedControl } from "@/components/ui/segmented-control";
 import { Tabs } from "@/components/ui/tabs";
 import { TextArea } from "@/components/ui/text-field";
 import { ConsensusBadge } from "@/features/consensus/consensus-badge";
-import { cardLabel, formatPoints } from "@/features/consensus/format";
+import { cardLabel } from "@/features/consensus/format";
 import { QuestionList } from "@/features/consensus/question-list";
-import { StatList, type StatRow } from "@/features/consensus/stat-list";
+import { StatList } from "@/features/consensus/stat-list";
+import { statRows } from "@/features/consensus/stat-rows";
 import { VoteDistribution } from "@/features/consensus/vote-distribution";
 import { en } from "@/messages/en";
 import { parseVotes } from "./parse-votes";
@@ -121,66 +122,6 @@ export function Simulator() {
 }
 
 type Tab = "statistics" | "questions";
-
-/** Level name for a rank of an ordinal deck; between two levels: "Medium–High". */
-function levelOf(deck: Deck, points: number): string {
-  const scale = numericCards(deck);
-  const exact = scale.find((card) => card.points === points);
-  if (exact) return exact.label;
-  const below = scale.filter((card) => card.points! < points).at(-1);
-  const above = scale.find((card) => card.points! > points);
-  return `${below?.label}–${above?.label}`;
-}
-
-function statRows(analysis: RoundAnalysis, deck: Deck): StatRow[] {
-  const { stats, recommendation, counts } = analysis;
-  const label = (value: string) => cardLabel(deck, value);
-  const rows: StatRow[] = [
-    {
-      title: c.stats.votes,
-      caption: c.stats.votesCaption(counts.unknown, counts.break),
-      value: `${counts.numeric}/${counts.total}`,
-    },
-  ];
-  if (!stats) return rows;
-
-  const range = {
-    title: c.stats.range,
-    caption: counts.numeric > 1 ? c.stats.steps(analysis.spreadSteps) : undefined,
-  };
-  if (deck.ordinal) {
-    // Ranks have no meaningful mean: show levels only.
-    rows.push(
-      { title: c.stats.median, value: levelOf(deck, stats.median) },
-      {
-        title: c.stats.mode,
-        value: stats.modes.length ? stats.modes.map((p) => levelOf(deck, p)).join(", ") : c.stats.noMode,
-      },
-      {
-        ...range,
-        value:
-          stats.min === stats.max
-            ? levelOf(deck, stats.min)
-            : `${levelOf(deck, stats.min)} – ${levelOf(deck, stats.max)}`,
-      },
-    );
-    return rows;
-  }
-  rows.push(
-    {
-      title: c.stats.median,
-      caption:
-        recommendation && findCard(deck, String(recommendation.median)) === undefined
-          ? c.stats.medianNote(formatPoints(recommendation.median), label(recommendation.card))
-          : undefined,
-      value: formatPoints(stats.median),
-    },
-    { title: c.stats.mean, value: stats.mean.toFixed(1) },
-    { title: c.stats.mode, value: stats.modes.length ? stats.modes.map(formatPoints).join(", ") : c.stats.noMode },
-    { ...range, value: `${formatPoints(stats.min)}–${formatPoints(stats.max)}` },
-  );
-  return rows;
-}
 
 function AnalysisPanel({
   analysis,
