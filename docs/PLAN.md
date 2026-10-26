@@ -17,6 +17,7 @@
 | 2026-10-25 | Mediana między kartami → **najbliższa karta, remis w górę** (np. 3 i 5 → mediana 4 → rekomendacja 5). |
 | 2026-10-25 | Rozwój **lokalnie** (Supabase CLI w Dockerze); konta Vercel/Supabase Cloud i domena dopiero przed pierwszym wdrożeniem (sekcja 8 — „Kiedy potrzebna infrastruktura”). |
 | 2026-10-25 | **Zmiana roli:** sprintdeck to narzędzie do **konsensusu co do zrozumienia i ryzyka**, nie do estymacji pracy. W zespołach, w których kod pisze AI, rozmiar i prognozę liczy automat (tf, ShipScope), a ludzie głosują tam, gdzie automat zgłasza wątpliwość. Silnik i mechanika pokoju bez zmian; dochodzi talia „Risk”, Fibonacci zostaje. Decyzja ekosystemu: pdi `docs/decyzje.md`, D-E1. Szczegóły: sekcja 12. |
+| 2026-10-25 | Backend pokoi (M2) zrobiony: `supabase/migrations/20261025150000_rooms.sql` + testy pgTAP. Zdarzenia realtime wysyła samo RPC (`private.emit`), a nie triggery — wszystkie zapisy i tak idą przez RPC. Ponowne głosowanie = `start_round` na tym samym zadaniu (osobne `revote` niepotrzebne). Dodatkowo: `get_room_preview` (ekran dołączenia), `set_current_item`, `skip_item`, `close_room`. |
 
 ---
 

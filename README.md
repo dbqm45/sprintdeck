@@ -21,6 +21,13 @@ npm run dev        # http://localhost:3000 — symulator: /simulator
 | `npm run lint` | ESLint |
 | `npm run typecheck` | generuje typy tras i uruchamia `tsc` |
 | `npm run build` | build produkcyjny |
+| `npm run db:start` | lokalny Supabase w Dockerze (pierwsze uruchomienie pobiera obrazy) |
+| `npm run db:test` | testy bazy (pgTAP): RLS, RPC, ukryte głosy, retencja |
+| `npm run db:reset` | odtwarza bazę z migracji |
+| `npm run db:types` | regeneruje `src/lib/supabase/database.types.ts` po zmianie migracji |
+
+Backend pokoi wymaga Dockera. Po `npm run db:start` skopiuj `.env.example` do `.env.local`
+i wpisz `PUBLISHABLE_KEY` z wyjścia komendy (albo z `npx supabase status`).
 
 ## Struktura
 
@@ -31,3 +38,6 @@ npm run dev        # http://localhost:3000 — symulator: /simulator
 - `src/features/consensus` — widoki wyniku Consensus Engine: wykres rozkładu głosów, statystyki, pytania, plakietka stanu.
 - `src/messages/en.ts` — wszystkie teksty interfejsu (EN).
 - `src/features/simulator` + `src/app/simulator` — symulator silnika do rozmów walidacyjnych.
+- `supabase/migrations` — backend pokoi: tabele, RLS (tylko odczyt dla członków pokoju), funkcje RPC dla wszystkich zapisów, zdarzenia realtime na kanale `room:<id>`, retencja 90 dni (`pg_cron`).
+- `supabase/tests` — testy pgTAP.
+- `src/lib/supabase` — klient przeglądarki (sesja anonimowa), wygenerowane typy bazy i typy odpowiedzi RPC.
