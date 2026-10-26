@@ -6,7 +6,7 @@ export interface Card {
   /** Text shown on the card. */
   label: string;
   kind: CardKind;
-  /** Numeric worth of the card; only set for numeric cards. */
+  /** Numeric worth of the card (for ordinal decks: its rank); only set for numeric cards. */
   points?: number;
 }
 
@@ -33,6 +33,31 @@ export const FIBONACCI_DECK: Deck = {
     { value: "break", label: "☕", kind: "break" },
   ],
 };
+
+/**
+ * Risk of shipping an item as specified: misunderstanding, hard verification,
+ * blast radius (docs/PLAN.md, section 12). Ordinal — points are ranks.
+ */
+export const RISK_DECK: Deck = {
+  id: "risk",
+  name: "Risk",
+  cards: [
+    { value: "low", label: "Low", kind: "numeric", points: 1 },
+    { value: "medium", label: "Medium", kind: "numeric", points: 2 },
+    { value: "high", label: "High", kind: "numeric", points: 3 },
+    { value: "very_high", label: "Very high", kind: "numeric", points: 4 },
+    { value: "?", label: "?", kind: "unknown" },
+    { value: "break", label: "☕", kind: "break" },
+  ],
+};
+
+/** Every deck a room can use, by id (the database keeps the same list). */
+export const DECKS = {
+  fibonacci: FIBONACCI_DECK,
+  risk: RISK_DECK,
+} as const satisfies Record<string, Deck>;
+
+export type DeckId = keyof typeof DECKS;
 
 export function findCard(deck: Deck, value: string): Card | undefined {
   return deck.cards.find((card) => card.value === value);

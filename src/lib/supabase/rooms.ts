@@ -3,6 +3,8 @@
  * The generated types only say `Json` for these, so they are spelled out here.
  */
 
+import type { DeckId } from "@/lib/deck";
+
 export type RoomStatus = "open" | "closed";
 export type ParticipantRole = "host" | "voter" | "observer";
 export type ItemStatus = "pending" | "estimating" | "estimated" | "skipped";
@@ -25,6 +27,7 @@ export interface JoinedRoom {
 export interface RoomPreview {
   title: string;
   status: RoomStatus;
+  deck: DeckId;
   participant_count: number;
   /** Up to five, host first. */
   participants: { display_name: string; role: ParticipantRole }[];
@@ -42,7 +45,7 @@ export interface RoomState {
     slug: string;
     title: string;
     status: RoomStatus;
-    deck: string;
+    deck: DeckId;
     current_item_id: string | null;
     version: number;
     created_at: string;
@@ -102,6 +105,7 @@ export type RoomErrorCode =
   | "not_host"
   | "room_closed"
   | "rate_limited"
+  | "invalid_deck"
   | "invalid_title"
   | "invalid_display_name"
   | "invalid_description"
