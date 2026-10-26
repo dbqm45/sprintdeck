@@ -225,6 +225,13 @@ export const en = {
       voteMode: "Vote",
       watchMode: "Watch",
       modeLabel: "Your role",
+      manage: "show actions",
+      makeHost: "Make host",
+      makeObserver: "Make observer",
+      makeVoter: "Make voter",
+      confirmHost: (name: string) => `Hand the host role to ${name}? You'll become a voter.`,
+      handOver: "Hand over",
+      cancel: "Cancel",
     },
     agenda: {
       title: (done: number, total: number) => `Agenda · ${done} of ${total} done`,

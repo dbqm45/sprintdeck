@@ -143,3 +143,29 @@ test("unknown rooms and bad links", async ({ page }) => {
   await page.getByRole("button", { name: "Join", exact: true }).click();
   await expect(view(page).getByText("That doesn't look like a room link.")).toBeVisible();
 });
+
+test("the host manages the team: makes someone an observer, then hands the host role over", async ({ browser }) => {
+  const anna = await person(browser);
+  const ben = await person(browser);
+  const { slug } = await createRoom(anna, "Team roles", "Anna");
+  await joinRoom(ben, slug, "Ben");
+  await addItem(anna, "Payment retries");
+
+  // Only the host can manage others, and not themselves.
+  await expect(view(anna).getByRole("button", { name: /^Anna/ })).toHaveCount(0);
+  await expect(view(ben).getByRole("button", { name: /^Anna/ })).toHaveCount(0);
+
+  await view(anna).getByRole("button", { name: /^Ben/ }).click();
+  await anna.getByRole("button", { name: "Make observer" }).click();
+  await expect(view(ben).getByRole("radio", { name: "Watch" })).toHaveAttribute("aria-checked", "true");
+
+  await view(anna).getByRole("button", { name: /^Ben/ }).click();
+  await anna.getByRole("button", { name: "Make host" }).click();
+  await expect(view(anna).getByText("Hand the host role to Ben? You'll become a voter.")).toBeVisible();
+  await anna.getByRole("button", { name: "Hand over" }).click();
+
+  await expect(ben.getByRole("button", { name: "Start voting" })).toBeVisible();
+  await expect(anna.getByRole("button", { name: "Start voting" })).toHaveCount(0);
+  await expect(view(anna).getByText("Waiting for the host to start voting.")).toBeVisible();
+  await expect(view(anna).getByRole("radio", { name: "Vote" })).toHaveAttribute("aria-checked", "true");
+});
