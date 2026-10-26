@@ -9,6 +9,8 @@ interface FieldProps {
   error?: string;
   /** Geist Mono — room codes, links, vote input. */
   mono?: boolean;
+  /** Keep the label for screen readers only (when a button next to the field says it). */
+  hideLabel?: boolean;
 }
 
 const inputClasses = (error: boolean, mono: boolean | undefined) =>
@@ -24,11 +26,12 @@ function FieldShell({
   label,
   hint,
   error,
+  hideLabel,
   children,
 }: FieldProps & { id: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-label text-ink">
+      <label htmlFor={id} className={hideLabel ? "sr-only" : "text-label text-ink"}>
         {label}
       </label>
       {children}
@@ -47,10 +50,18 @@ function FieldShell({
   );
 }
 
-export function TextField({ label, hint, error, mono, className, ...props }: FieldProps & ComponentProps<"input">) {
+export function TextField({
+  label,
+  hint,
+  error,
+  mono,
+  hideLabel,
+  className,
+  ...props
+}: FieldProps & ComponentProps<"input">) {
   const id = useId();
   return (
-    <FieldShell id={id} label={label} hint={hint} error={error}>
+    <FieldShell id={id} label={label} hint={hint} error={error} hideLabel={hideLabel}>
       <input
         id={id}
         aria-invalid={error ? true : undefined}

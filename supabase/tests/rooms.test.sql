@@ -221,11 +221,17 @@ select is(
 
 -- ---------------------------------------------------------------- events and retention
 reset role;
-select ok((select version from public.rooms) > 10, 'every change bumps the room version');
+select ok(
+  (select version from public.rooms where id = pg_temp.ctx('room')::uuid) > 10, 'every change bumps the room version'
+);
 
-update public.rooms set last_activity_at = now() - interval '91 days';
+-- Only this test's room is aged, so leftovers in a local database don't change the result.
+update public.rooms set last_activity_at = now() - interval '91 days' where id = pg_temp.ctx('room')::uuid;
 select is(private.purge_inactive_rooms(), 1, 'rooms inactive for 90 days are purged');
-select is((select count(*)::int from public.participants), 0, 'their participants go with them');
+select is(
+  (select count(*)::int from public.participants where room_id = pg_temp.ctx('room')::uuid), 0,
+  'their participants go with them'
+);
 
 select * from finish();
 rollback;
