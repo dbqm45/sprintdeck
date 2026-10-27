@@ -595,12 +595,12 @@ Wymagają kont, importu z Jiry i integracji, więc są poza zakresem MVP:
 
 | Co | Skąd dane | Po co |
 |---|---|---|
-| Szacunek automatu przy zadaniu (liczba cięć, koszt, przewidywany czas) | plan tf, raporty Talosa, ShipScope | ludzie widzą prognozę i nie liczą jej sami |
+| Szacunek automatu przy zadaniu (liczba cięć, koszt, przewidywany czas) | prognoza zmiany z pdi (`forecast` w stanie zmiany, `forecast_change`; liczba cięć planu tf × czas przepływu z ShipScope, z przedziałem i wątpliwościami, dbqm45/pdi#37), koszt z raportów Talosa | ludzie widzą prognozę i nie liczą jej sami; jej `doubts` (mało historii, plan większy niż w historii) to powód do sesji |
 | Głos AI jako uczestnik (oznaczony, nieimienny) | ten sam szacunek przełożony na kartę talii | rozbieżność „AI mówi Low, zespół mówi High” traktujemy jak głos odstający i pytamy o powód |
 | Sesja wyzwalana przez ci_for_sdlc | otwarte pytania, nowa domena, historyjka po podziale | ludzie spotykają się tylko tam, gdzie automat zgłasza wątpliwość |
 | Stan kształtu historyjki przed głosowaniem, „Zgłoś niejasność” po wyniku „dwa obozy” | ci_for_sdlc (plan G1/G2, krok G2.6) | rozbieżność staje się pytaniem przy historyjce |
 | Notatka z zatwierdzenia jako decyzja | rejestr pdi | uzasadnienie nie ginie po spotkaniu |
-| Kalibracja szacunku automatu | rzeczywisty czas z ShipScope | luka G3 z mapy ekosystemu |
+| Kalibracja szacunku automatu | rzeczywisty czas z ShipScope (dbqm45/evdt-service-shipscope#119), porównanie z prognozą w pdi (`forecast_report`) | luka G3 z mapy ekosystemu: kroki 1–2 zrobione, w sprintdecku zostaje pokazanie prognozy przy zadaniu |
 
 ### 12.4. Pytania do wywiadów (tydzień 1)
 
