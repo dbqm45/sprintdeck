@@ -24,9 +24,17 @@ export default function Home() {
     <main className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6">
       <nav className="flex h-16 items-center justify-between">
         <Wordmark />
-        <Link href="/simulator" className={buttonClasses({ variant: "outline" })}>
-          {t.nav.simulator}
-        </Link>
+        <div className="flex items-center gap-2">
+          {process.env.NEXT_PUBLIC_SUITE_SIGN_IN === "1" ? (
+            // A route handler, not a page: a plain link, so the browser leaves for the suite's sign-in.
+            <a href="/auth/suite/login" className={buttonClasses({ variant: "outline" })}>
+              {en.suite.signIn}
+            </a>
+          ) : null}
+          <Link href="/simulator" className={buttonClasses({ variant: "outline" })}>
+            {t.nav.simulator}
+          </Link>
+        </div>
       </nav>
 
       <div className="grid items-center gap-10 py-10 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:gap-14 lg:py-14">

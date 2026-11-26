@@ -293,6 +293,27 @@ export const en = {
       unknown: "Something went wrong. Try again.",
     } satisfies Record<RoomErrorCode | "captcha_failed" | "offline" | "unknown", string>,
   },
+  suite: {
+    signIn: "Sign in with the suite",
+    signingIn: "Signing you in…",
+    refused: {
+      "not-member": "Your suite account is not a member of the organization that uses this Sprintdeck.",
+      "no-role": "Your suite account has no role in Sprintdeck. Ask your administrator for the role member.",
+      failed: "The suite sign-in did not work. Try again.",
+    } as Record<string, string>,
+  },
+  fromPdi: {
+    title: "A room from DI Decision",
+    lead: "The agenda “Discuss with team” becomes a room: one item per topic, the Risk deck, you as the host.",
+    signInFirst: "Sign in with the suite first: the room is opened in your name.",
+    creating: "Opening the room…",
+    refused: {
+      off: "This Sprintdeck is not connected to DI Decision.",
+      signature: "This link was not made by DI Decision, or it was changed.",
+      expired: "This link has expired. Open the room again from DI Decision.",
+      malformed: "This agenda cannot be turned into a room.",
+    } as Record<string, string>,
+  },
   simulator: {
     title: "Consensus Engine simulator",
     intro:
