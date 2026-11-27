@@ -7,10 +7,25 @@ import type { RoomState } from "@/lib/supabase/rooms";
 import { ConsensusBadge } from "@/features/consensus/consensus-badge";
 import { cardLabel, formatPoints } from "@/features/consensus/format";
 import { en } from "@/messages/en";
+import { getBrowserClient } from "@/lib/supabase/client";
 import { deckOf, summarize } from "./derive";
 import { toCsv, toMarkdown } from "./export";
 
 const t = en.room.summary;
+
+/** Results back to the DI Decision agenda: the server signs them and answers with the link to pdi. */
+async function sendToPdi(slug: string): Promise<string | null> {
+  const { data } = await getBrowserClient().auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) return null;
+  const res = await fetch("/api/pdi-results", {
+    method: "POST",
+    headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+    body: JSON.stringify({ slug }),
+  });
+  const body = (await res.json().catch(() => ({}))) as { url?: string };
+  return res.ok && typeof body.url === "string" ? body.url : null;
+}
 
 function download(name: string, text: string, type: string) {
   const url = URL.createObjectURL(new Blob([text], { type }));
@@ -35,6 +50,7 @@ function Tile({ label, value, of, sub }: { label: string; value: string; of?: st
 /** Results of the session and export (Markdown for pasting, CSV for spreadsheets). */
 export function SummaryView({ state }: { state: RoomState }) {
   const [copied, setCopied] = useState(false);
+  const [pdiError, setPdiError] = useState(false);
   const deck = deckOf(state);
   const summary = summarize(state);
   const date = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(state.room.created_at));
@@ -61,8 +77,26 @@ export function SummaryView({ state }: { state: RoomState }) {
           <Button variant="outline" onClick={() => download(`${fileName}.csv`, toCsv(state), "text/csv")}>
             {t.downloadCsv}
           </Button>
+          {process.env.NEXT_PUBLIC_PDI_URL && state.me.role === "host" ? (
+            <Button
+              variant="outline"
+              onClick={() =>
+                void sendToPdi(state.room.slug).then((link) => {
+                  if (link) window.location.assign(link);
+                  else setPdiError(true);
+                })
+              }
+            >
+              {t.toPdi}
+            </Button>
+          ) : null}
         </div>
       </div>
+      {pdiError ? (
+        <p role="alert" className="m-0 text-label text-ink-muted">
+          {t.toPdiFailed}
+        </p>
+      ) : null}
 
       <Panel className="grid sm:grid-cols-2 lg:grid-cols-4">
         <Tile

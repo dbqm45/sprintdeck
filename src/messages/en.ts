@@ -250,6 +250,8 @@ export const en = {
       copyMarkdown: "Copy as Markdown",
       copied: "Copied",
       downloadCsv: "Download CSV",
+      toPdi: "Send results to DI Decision",
+      toPdiFailed: "Could not prepare the results for DI Decision. Only the host can send them, for a room opened from its agenda.",
       estimated: "Items estimated",
       skipped: (n: number) => `${n} skipped`,
       totalPoints: "Total points",
