@@ -33,6 +33,32 @@ lokalnego Supabase do `.env.local` (ręcznie: skopiuj `.env.example` i wpisz `PU
 z `npx supabase status`). Testy E2E potrzebują tego samego oraz przeglądarki:
 `npx playwright install chromium` (raz).
 
+## Logowanie przez suitę i pokój z DI Decision
+
+Plan: dbqm45/pdi `docs/plan-pokoj-sprintdeck.md`. Bez tych ustawień wszystko działa jak dotąd, z logowaniem
+anonimowym.
+
+- **Logowanie przez suitę** („Sign in with the suite”, `/auth/suite/login`): osoba loguje się w DI Identity (Keycloak,
+  realm `suite`, klient `sprintdeck`). Serwer sprintdecka prowadzi kod z PKCE, z zakresem tylko `openid`, i przekazuje
+  ID token do Supabase Auth (`grant_type=id_token`, dostawca `keycloak`, `email_optional`). Powstaje nieanonimowy
+  użytkownik z nazwą z suity, bez e-maila. Wchodzi tylko członek organizacji `SUITE_ORGANIZATION` z rolą
+  `sprintdeck:member`; inni widzą powód. Dlaczego nie zwykłe przekierowanie Supabase: prosi zawsze o zakres `email`,
+  którego realm tej aplikacji nie daje (DI3).
+- **Pokój z agendy „Discuss with team”** (`/from-pdi`): link z DI Decision niesie sprawy w części `#` adresu, podpisane
+  HMAC-SHA256 wspólnym sekretem (`PDI_SPRINTDECK_SECRET`) i ważne do godziny. Serwer sprawdza podpis
+  (`/api/pdi-agenda`, `src/lib/pdi-agenda.ts`). Osoba zalogowana przez suitę zostaje prowadzącą pokoju z talią
+  „Risk”, a każda sprawa staje się zadaniem. Ten sam link otwarty drugi raz w tej przeglądarce wraca do tego samego
+  pokoju. Decyzję zapisuje się dalej w DI Decision.
+
+Lokalnie:
+1. W `/etc/hosts`: `127.0.0.1 host.docker.internal`; w realmie klient `sprintdeck` z
+   `REDIRECT_SPRINTDECK=http://127.0.0.1:3000/auth/suite/callback` (di-identity `configure`) i rola `sprintdeck:member`
+   dla osoby.
+2. `SUPABASE_AUTH_EXTERNAL_KEYCLOAK_URL=http://host.docker.internal:8180/realms/suite` i
+   `SUPABASE_AUTH_EXTERNAL_KEYCLOAK_SECRET=<sekret klienta sprintdeck>` w środowisku, potem `npm run db:start`.
+3. W `.env.local`: `NEXT_PUBLIC_SUITE_SIGN_IN=1`, `SUITE_ISSUER` (ten sam adres), `SUITE_CLIENT_SECRET`,
+   `SUITE_ORGANIZATION`, `PDI_SPRINTDECK_SECRET`; potem `npm run dev`.
+
 ## Struktura
 
 - `src/lib/consensus` — Consensus Engine: statystyki, klasyfikacja rozbieżności, dobór pytań (czysty TS, bez zależności).
