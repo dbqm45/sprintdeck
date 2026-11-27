@@ -72,6 +72,11 @@ export default function FromPdi() {
       for (const item of check.items) {
         const added = await client.rpc("add_item", { p_room_id: room.room_id, p_title: item.title, p_description: item.description ?? undefined });
         if (added.error) return fail(errorMessage(added.error));
+        if (item.ref) {
+          // The pdi item it came from: the room's results go back to it ("Send results to DI Decision").
+          const marked = await client.rpc("set_item_ref", { p_item_id: added.data as unknown as string, p_ref: item.ref });
+          if (marked.error) return fail(errorMessage(marked.error));
+        }
       }
       stashHostSecret(room.slug, room.host_secret);
       try {

@@ -13,6 +13,8 @@ const MAX_AGE_SECONDS = 3600;
 export interface AgendaItem {
   title: string;
   description: string | null;
+  /** The pdi inbox item it came from, so the room's results can go back to it. */
+  ref: string | null;
 }
 
 export type AgendaCheck =
@@ -40,7 +42,12 @@ export function verifyAgenda(secret: string, d: string, s: string, nowSeconds: n
   for (const raw of p.items as Record<string, unknown>[]) {
     if (!raw || typeof raw !== "object" || !text(raw.title, 200)) return { ok: false, reason: "malformed" };
     if (raw.description !== undefined && raw.description !== null && !text(raw.description, 2000)) return { ok: false, reason: "malformed" };
-    items.push({ title: (raw.title as string).trim(), description: typeof raw.description === "string" ? raw.description : null });
+    if (raw.ref !== undefined && (typeof raw.ref !== "string" || !/^[A-Za-z0-9._-]{1,128}$/.test(raw.ref))) return { ok: false, reason: "malformed" };
+    items.push({
+      title: (raw.title as string).trim(),
+      description: typeof raw.description === "string" ? raw.description : null,
+      ref: typeof raw.ref === "string" ? raw.ref : null,
+    });
   }
   return { ok: true, title: (p.title as string).trim(), items };
 }

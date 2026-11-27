@@ -15,7 +15,7 @@ const agenda = (extra: Record<string, unknown> = {}) => ({
   title: "Discuss with team — 2026-11-26",
   exp: NOW + 600,
   items: [
-    { title: "Prośba o bramkę B2 dla CHG-2", description: "CHG-2 · B2\nWhy now: the run is paused" },
+    { title: "Prośba o bramkę B2 dla CHG-2", description: "CHG-2 · B2\nWhy now: the run is paused", ref: "evt-2" },
     { title: "Plan CHG-1" },
   ],
   ...extra,
@@ -28,8 +28,8 @@ describe("an agenda from DI Decision (pdi), signed with the shared secret", () =
       ok: true,
       title: "Discuss with team — 2026-11-26",
       items: [
-        { title: "Prośba o bramkę B2 dla CHG-2", description: "CHG-2 · B2\nWhy now: the run is paused" },
-        { title: "Plan CHG-1", description: null },
+        { title: "Prośba o bramkę B2 dla CHG-2", description: "CHG-2 · B2\nWhy now: the run is paused", ref: "evt-2" },
+        { title: "Plan CHG-1", description: null, ref: null },
       ],
     });
   });
@@ -42,7 +42,7 @@ describe("an agenda from DI Decision (pdi), signed with the shared secret", () =
     const far = link(agenda({ exp: NOW + 2 * 3600 }));
     expect(verifyAgenda(SECRET, far.d, far.s, NOW)).toEqual({ ok: false, reason: "expired" });
     for (const bad of [agenda({ items: [] }), agenda({ v: 2 }), agenda({ title: "" }), agenda({ items: [{ title: "x".repeat(201) }] }),
-      agenda({ items: Array.from({ length: 31 }, () => ({ title: "x" })) })]) {
+      agenda({ items: Array.from({ length: 31 }, () => ({ title: "x" })) }), agenda({ items: [{ title: "x", ref: "evt 1" }] })]) {
       const l = link(bad);
       expect(verifyAgenda(SECRET, l.d, l.s, NOW)).toEqual({ ok: false, reason: "malformed" });
     }

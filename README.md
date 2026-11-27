@@ -48,7 +48,17 @@ anonimowym.
   HMAC-SHA256 wspólnym sekretem (`PDI_SPRINTDECK_SECRET`) i ważne do godziny. Serwer sprawdza podpis
   (`/api/pdi-agenda`, `src/lib/pdi-agenda.ts`). Osoba zalogowana przez suitę zostaje prowadzącą pokoju z talią
   „Risk”, a każda sprawa staje się zadaniem. Ten sam link otwarty drugi raz w tej przeglądarce wraca do tego samego
-  pokoju. Decyzję zapisuje się dalej w DI Decision.
+  pokoju. Każde zadanie pamięta, z której sprawy w pdi pochodzi (`items.external_ref`, funkcje `set_item_ref` i
+  `get_item_refs`). Decyzję zapisuje się dalej w DI Decision.
+- **Wyniki z powrotem do DI Decision** (plan: dbqm45/pdi `docs/plan-wyniki-sprintdecka.md`): w podsumowaniu pokoju
+  prowadzący ma „Send results to DI Decision”, gdy ustawiono `NEXT_PUBLIC_PDI_URL`. Serwer (`/api/pdi-results`,
+  `src/lib/pdi-results.ts`) sam czyta stan pokoju tokenem prowadzącego i dla zadań z pdi zbiera:
+  - ocenę końcową;
+  - głosy ostatniej odkrytej rundy policzone po kartach, bez nazwisk;
+  - stan zgody, liczbę rund i do trzech notatek.
+
+  Podpisuje to tym samym sekretem i odsyła przeglądarkę na `<pdi>/discuss/results`. Tam decydent ogląda wyniki i
+  dołącza je do agendy.
 
 Lokalnie:
 1. W `/etc/hosts`: `127.0.0.1 host.docker.internal`; w realmie klient `sprintdeck` z

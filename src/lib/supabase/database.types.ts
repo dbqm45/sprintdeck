@@ -51,14 +51,14 @@ isOneToOne: false
                   ]
                 },"items": {
                   Row: {
-                    "created_at": string,"description": string | null,"final_estimate": string | null,"finalized_at": string | null,"finalized_by": string | null,"id": string,"position": number,"room_id": string,"status": string,"title": string
+                    "created_at": string,"description": string | null,"external_ref": string | null,"final_estimate": string | null,"finalized_at": string | null,"finalized_by": string | null,"id": string,"position": number,"room_id": string,"status": string,"title": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"description"?: string | null,"final_estimate"?: string | null,"finalized_at"?: string | null,"finalized_by"?: string | null,"id"?: string,"position": number,"room_id": string,"status"?: string,"title": string
+                    "created_at"?: string,"description"?: string | null,"external_ref"?: string | null,"final_estimate"?: string | null,"finalized_at"?: string | null,"finalized_by"?: string | null,"id"?: string,"position": number,"room_id": string,"status"?: string,"title": string
                   }
                   Update: {
-                    "created_at"?: string,"description"?: string | null,"final_estimate"?: string | null,"finalized_at"?: string | null,"finalized_by"?: string | null,"id"?: string,"position"?: number,"room_id"?: string,"status"?: string,"title"?: string
+                    "created_at"?: string,"description"?: string | null,"external_ref"?: string | null,"final_estimate"?: string | null,"finalized_at"?: string | null,"finalized_by"?: string | null,"id"?: string,"position"?: number,"room_id"?: string,"status"?: string,"title"?: string
                   }
                   Relationships: [
                     {
@@ -194,6 +194,9 @@ isOneToOne: false
 "finalize_item":
 { Args: { "p_estimate": string,"p_item_id": string,"p_note"?: string }; Returns: undefined
                            },
+"get_item_refs":
+{ Args: { "p_slug": string }; Returns: Json
+                           },
 "get_room_preview":
 { Args: { "p_slug": string }; Returns: Json
                            },
@@ -211,6 +214,9 @@ isOneToOne: false
                            },
 "set_current_item":
 { Args: { "p_item_id": string }; Returns: undefined
+                           },
+"set_item_ref":
+{ Args: { "p_item_id": string,"p_ref": string }; Returns: undefined
                            },
 "set_participant_role":
 { Args: { "p_participant_id": string,"p_role": string }; Returns: undefined
