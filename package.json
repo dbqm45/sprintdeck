@@ -19,24 +19,24 @@
     "db:env": "node scripts/db-env.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.118.0",
+    "@supabase/supabase-js": "^2.119.2",
     "next": "16.4.6",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.63.0",
-    "@tailwindcss/turbopack": "^4",
+    "@playwright/test": "^1.65.1",
+    "@tailwindcss/turbopack": "^4.3.5",
     "@types/node": "22.20.5",
-    "@types/react": "^19",
+    "@types/react": "^19.3.3",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
-    "supabase": "^2.122.0",
-    "tailwindcss": "^4",
+    "supabase": "^2.122.1",
+    "tailwindcss": "^4.3.5",
     "typescript": "^5",
     "vite": "7.3.7",
-    "vitest": "5.1.0"
+    "vitest": "5.1.2"
   },
   "overrides": {
     "tinybench": "6.2.3",
