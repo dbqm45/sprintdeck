@@ -35,7 +35,7 @@
     "supabase": "^2.122.1",
     "tailwindcss": "^4.3.5",
     "typescript": "^5",
-    "vite": "7.3.7",
+    "vite": "8.4.0",
     "vitest": "5.1.2"
   },
   "overrides": {
